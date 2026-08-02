@@ -172,6 +172,24 @@ export function useSite(options) {
     return useAdsCrmQuery(['site', locale], () => client.site(options));
 }
 
+/**
+ * Etkin diller + varsayılan dil — dil seçici için.
+ * `{ locales, defaultLocale, items, current, switchTo }` olarak da açılır.
+ */
+export function useLocales(options) {
+    const { client, locale, setLocale } = useAdsCrm();
+    const query = useAdsCrmQuery(['locales', locale], () => client.locales(options));
+
+    return {
+        ...query,
+        locales: query.data?.locales ?? [],
+        defaultLocale: query.data?.default ?? null,
+        current: query.data?.current ?? locale ?? null,
+        items: query.data?.items ?? [],
+        switchTo: setLocale,
+    };
+}
+
 export function useContentTypes(options) {
     const { client, locale } = useAdsCrm();
     return useAdsCrmQuery(['content-types', locale], () => client.contentTypes(options));

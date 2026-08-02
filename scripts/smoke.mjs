@@ -32,6 +32,13 @@ console.log('\n── site & sitemap ──────────────�
 const site = await cms.site();
 await step('site()', () => `${site.name} · diller: ${site.locales.join(',')} · varsayılan: ${site.default_locale}`);
 
+await step('locales()', async () => {
+    const langs = await cms.locales();
+    return `${langs.locales.join(',')} · varsayılan=${langs.default} · current=${langs.current} · `
+        + langs.items.map((l) => `${l.code}:"${l.name}"${l.prefix || '(öneksiz)'}→${l.home_path}`).join(' ');
+});
+await step('defaultLocale()', () => cms.defaultLocale());
+
 const types = await cms.contentTypes();
 await step('contentTypes()', () => types.map((t) => `${t.slug}${t.is_collection ? '' : ' (tekil)'}`).join(', '));
 await step('tracking()', async () => Object.keys(await cms.tracking()).join(', '));

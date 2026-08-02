@@ -132,6 +132,8 @@ Hepsi `Promise` döner ve son parametre olarak `{ locale, revalidate, tags, cach
 | Metot | Açıklama |
 |-------|----------|
 | `cms.site()` | Site künyesi: ad, diller, varsayılan dil, ana sayfa, izleme kodları |
+| `cms.locales()` | **Diller**: etkin kodlar, varsayılan, dil başına ad/URL öneki/ana sayfa yolu |
+| `cms.defaultLocale()` | Yalnızca varsayılan dil kodu |
 | `cms.tracking()` | GA4/GTM/Pixel kimlikleri + hazır `head_html` / `body_html` |
 | `cms.contentTypes()` | Sitemap: tüm bölümler (`paths` ile birlikte) |
 | `cms.contentType(slug)` | Tek bölüm (herhangi bir dildeki slug ile) |
@@ -196,6 +198,26 @@ await cms.list('haberler', { locale: 'en' });   // ya da çağrı bazında
 
 Dil sitede etkin değilse sunucu **varsayılan dile** düşer. Çeviri boşsa alan değeri
 varsayılan dildeki değere düşer — sayfada asla boş alan görünmez.
+
+**Hangi diller etkin?** `cms.locales()` dil seçici için gereken her şeyi verir:
+
+```js
+const { locales, default: def, current, items } = await cms.locales();
+// locales: ['tr','en'] · default: 'tr' · current: 'tr'
+// items: [{ code:'tr', name:'Türkçe', is_default:true, prefix:'',    home_path:'/'   },
+//         { code:'en', name:'English', is_default:false, prefix:'/en', home_path:'/en' }]
+```
+
+```jsx
+// Dil seçici — bulunduğunuz sayfanın karşılıkları için cms.alternates() ile birleştirin
+const { items } = await cms.locales();
+const alt = await cms.alternates(page.type, page.kind === 'item' ? page.data : undefined);
+
+{items.map((l) => <a key={l.code} href={alt[l.code] ?? l.home_path}>{l.name}</a>)}
+```
+
+`prefix` varsayılan dilde boş stringtir (AdsCRM varsayılan dili öneksiz yayınlar);
+kendi URL'lerinizi kurarken bunu kullanın. İstemci bileşenlerinde: `useLocales()`.
 
 ### Yollar
 
@@ -270,7 +292,7 @@ function Arama() {
 }
 ```
 
-Mevcut hook'lar: `useSite` · `useContentTypes` · `useList` · `useItem` · `usePage` ·
+Mevcut hook'lar: `useSite` · `useLocales` · `useContentTypes` · `useList` · `useItem` · `usePage` ·
 `useMenu` · `useMenuTree` · `useSlider` · `useView` · `useBlocks` · `useStrings` ·
 `useSearch` · `useAdsForm` — ve her şey için genel `useAdsCrmQuery(key, fetcher)`.
 

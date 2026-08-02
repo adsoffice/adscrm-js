@@ -33,6 +33,26 @@ export interface Site {
     homepage: { name: string; slug: string; paths: Record<Locale, string> } | null;
 }
 
+export interface LocaleInfo {
+    code: Locale;
+    /** Dilin kendi dilindeki adı: Türkçe, English, Русский… */
+    name: string;
+    is_default: boolean;
+    is_current: boolean;
+    /** URL öneki — varsayılan dilde boş string, diğerlerinde `/en`. */
+    prefix: string;
+    /** O dilin ana sayfa yolu: `/` · `/en`. */
+    home_path: string;
+}
+
+export interface LocalesResponse {
+    locales: Locale[];
+    default: Locale;
+    /** `?locale=` ile çözülen dil (geçersizse varsayılana düşer). */
+    current: Locale;
+    items: LocaleInfo[];
+}
+
 export interface Tracking {
     codes: TrackingCodes;
     head_html: string;
@@ -299,6 +319,10 @@ export interface AdsCrmClient {
     raw<T = unknown>(path: string, options?: RequestOptions & { method?: string; body?: unknown }): Promise<T>;
 
     site(options?: RequestOptions): Promise<Site>;
+    /** Etkin diller + varsayılan dil (dil seçici / hreflang). */
+    locales(options?: RequestOptions): Promise<LocalesResponse>;
+    /** Yalnızca varsayılan dil kodu. */
+    defaultLocale(options?: RequestOptions): Promise<Locale>;
     tracking(options?: RequestOptions): Promise<Tracking>;
 
     contentTypes(options?: RequestOptions): Promise<ContentType[]>;

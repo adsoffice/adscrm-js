@@ -77,6 +77,20 @@ export function createClient(options = {}) {
             return remember('site', () => data(call('site', opts)), 30000);
         },
 
+        /**
+         * Etkin diller + varsayılan dil. Dil seçici ve `hreflang` için gereken her şey:
+         * `{ locales, default, current, items: [{ code, name, is_default, prefix, home_path }] }`.
+         */
+        locales(opts) {
+            const key = `locales:${opts?.locale ?? config.locale ?? ''}`;
+            return remember(key, () => data(call('locales', opts)), 30000);
+        },
+
+        /** Yalnızca varsayılan dil kodu — istemci dil ayarı yapmadan önce sorulur. */
+        async defaultLocale(opts) {
+            return (await client.locales(opts)).default;
+        },
+
         /** Google/Meta izleme kodları + enjekte edilmeye hazır `head_html`/`body_html`. */
         tracking(opts) {
             return data(call('tracking', opts));

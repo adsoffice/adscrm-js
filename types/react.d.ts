@@ -1,8 +1,8 @@
 import type { ReactNode, RefObject, FormEvent } from 'react';
 import type {
     AdsCrmClient, CaptchaProvider, ContentItem, ContentType, FormField, FormSchema,
-    ListResponse, Locale, Menu, MenuTreeEntry, MenuTreeResponse, RequestOptions,
-    SearchResponse, Site, Slider, StringMap, SubmitResult, View,
+    ListResponse, Locale, LocaleInfo, LocalesResponse, Menu, MenuTreeEntry, MenuTreeResponse,
+    RequestOptions, SearchResponse, Site, Slider, StringMap, SubmitResult, View,
 } from './index.js';
 
 export interface AdsCrmContextValue {
@@ -38,6 +38,15 @@ export function useAdsCrmQuery<T>(
 export function invalidateAdsCrm(key?: unknown[] | string): void;
 
 export function useSite(options?: RequestOptions): QueryResult<Site>;
+
+export function useLocales(options?: RequestOptions): QueryResult<LocalesResponse> & {
+    locales: Locale[];
+    defaultLocale: Locale | null;
+    current: Locale | null;
+    items: LocaleInfo[];
+    /** Provider'daki aktif dili değiştirir (hook'lar yeni dille yeniden çeker). */
+    switchTo(locale: Locale): void;
+};
 export function useContentTypes(options?: RequestOptions): QueryResult<ContentType[]>;
 
 export function useList(
