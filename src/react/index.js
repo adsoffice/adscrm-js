@@ -206,9 +206,30 @@ export function usePage(typeSlug, options) {
     return useAdsCrmQuery(['page', typeSlug, locale], () => client.page(typeSlug, options), { enabled: !!typeSlug });
 }
 
-export function useMenu(slug, options) {
+/** Tek menü — slug ya da id ile. */
+export function useMenu(slugOrId, options) {
     const { client, locale } = useAdsCrm();
-    return useAdsCrmQuery(['menu', slug, locale], () => client.menu(slug, options), { enabled: !!slug });
+    return useAdsCrmQuery(['menu', slugOrId, locale], () => client.menu(slugOrId, options), {
+        enabled: slugOrId !== undefined && slugOrId !== null && slugOrId !== '',
+    });
+}
+
+/**
+ * Sitenin tüm menüleri, ağaçlarıyla tek istekte.
+ * `{ menus, bySlug }` olarak da açılır: `bySlug.header?.items`.
+ */
+export function useMenuTree(options = {}) {
+    const { client, locale } = useAdsCrm();
+    const query = useAdsCrmQuery(['menu-tree', locale, options.locales], () => client.menuTree(options));
+
+    const menus = query.data?.data ?? [];
+    const bySlug = useMemo(() => {
+        const out = {};
+        for (const menu of menus) out[menu.slug] = menu;
+        return out;
+    }, [query.data]);
+
+    return { ...query, menus, bySlug, meta: query.data?.meta ?? null };
 }
 
 export function useSlider(slug, options) {

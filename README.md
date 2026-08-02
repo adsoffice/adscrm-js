@@ -146,12 +146,46 @@ Hepsi `Promise` döner ve son parametre olarak `{ locale, revalidate, tags, cach
 
 | Metot | Açıklama |
 |-------|----------|
-| `cms.menus()` · `cms.menu(slug)` | Menü listesi / hiyerarşik menü |
+| `cms.menus()` | Menü künyeleri (id, name, slug) |
+| `cms.menuTree()` | **Tüm menüler + ağaçları** tek istekte (`{ locales: 'all' }` → her dil) |
+| `cms.menuMap()` | Aynısı, `slug → menü` haritası olarak |
+| `cms.menu(slug \| id)` | Tek menünün hiyerarşik ağacı (slug ya da menü id'si) |
 | `cms.sliders()` · `cms.slider(slug)` | Slider listesi / slaytlar |
 | `cms.view(slug)` | Sayfa görünümü — bir sayfanın tüm blokları tek istekte |
 | `cms.blocks(slug)` | Aynısı, `key → data` haritası olarak |
 | `cms.strings({ group, keys })` | Dil değişkenleri sözlüğü (`locales: 'all'` → tüm diller) |
 | `cms.string(key)` · `cms.viewStrings(slug)` | Tek değişken / görünüme bağlı değişkenler |
+
+### Navigasyon (menüler)
+
+Tüm menüleri tek istekte çekip layout'ta dağıtın:
+
+```jsx
+// app/layout.jsx
+const { header, footer } = await cms.menuMap();      // slug → menü
+
+<nav>{header?.items.map(renderItem)}</nav>
+```
+
+```jsx
+function renderItem(item) {
+  return (
+    <li key={item.id}>
+      <a href={item.url} target={item.target}>{item.label}</a>
+      {item.children.length > 0 && <ul>{item.children.map(renderItem)}</ul>}
+    </li>
+  );
+}
+```
+
+- `cms.menuTree()` → `{ data: [{ id, name, slug, items }], meta }`.
+- `cms.menuTree({ locales: 'all' })` → her menü `items` yerine `items_by_locale`
+  taşır; sözlüğü bir kez çekip dili istemcide değiştirmek için.
+- `cms.menu('header')` ya da `cms.menu(1)` → tek menü (slug **veya** id).
+- `url` alanları dile göre çözülmüş gelir (`/hizmetler` · `/en/services`).
+- Bir dilde hiç öğe yoksa varsayılan dilin menüsüne düşülür — navigasyon boş kalmaz.
+
+İstemci bileşenlerinde: `const { bySlug } = useMenuTree()` · `useMenu('header')`.
 
 ### Dil
 
@@ -237,8 +271,8 @@ function Arama() {
 ```
 
 Mevcut hook'lar: `useSite` · `useContentTypes` · `useList` · `useItem` · `usePage` ·
-`useMenu` · `useSlider` · `useView` · `useBlocks` · `useStrings` · `useSearch` ·
-`useAdsForm` — ve her şey için genel `useAdsCrmQuery(key, fetcher)`.
+`useMenu` · `useMenuTree` · `useSlider` · `useView` · `useBlocks` · `useStrings` ·
+`useSearch` · `useAdsForm` — ve her şey için genel `useAdsCrmQuery(key, fetcher)`.
 
 Hepsi `{ data, error, isLoading, isFetching, refetch }` döner; aynı anahtar için istekler
 tekilleştirilir ve 30 sn taze sayılır (`staleTime` ile ayarlanır, `invalidateAdsCrm()` ile düşer).

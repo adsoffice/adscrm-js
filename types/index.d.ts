@@ -116,9 +116,29 @@ export interface MenuItem {
 }
 
 export interface Menu {
+    id: number;
     name: string;
     slug: string;
     items: MenuItem[];
+}
+
+/** `menus/tree` yanıtındaki menü — `locales: 'all'` isteğinde `items_by_locale` gelir. */
+export interface MenuTreeEntry {
+    id: number;
+    name: string;
+    slug: string;
+    items?: MenuItem[];
+    items_by_locale?: Record<Locale, MenuItem[]>;
+}
+
+export interface MenuTreeResponse {
+    data: MenuTreeEntry[];
+    meta: {
+        locale?: Locale;
+        locales?: Locale[];
+        default_locale: Locale;
+        total: number;
+    };
 }
 
 export interface Slide {
@@ -292,7 +312,12 @@ export interface AdsCrmClient {
     search(q: string, options?: RequestOptions & { limit?: number }): Promise<SearchResponse>;
 
     menus(options?: RequestOptions): Promise<Array<{ id: number; name: string; slug: string }>>;
-    menu(slug: string, options?: RequestOptions): Promise<Menu>;
+    /** Tüm menüler + ağaçları tek istekte. `locales: 'all'` → `items_by_locale`. */
+    menuTree(options?: RequestOptions & { locales?: 'all' }): Promise<MenuTreeResponse>;
+    /** Aynı veri, `slug → menü` haritası olarak. */
+    menuMap(options?: RequestOptions & { locales?: 'all' }): Promise<Record<string, MenuTreeEntry>>;
+    /** Tek menü — slug ya da id ile. */
+    menu(slugOrId: string | number, options?: RequestOptions): Promise<Menu>;
     sliders(options?: RequestOptions): Promise<Array<{ id: number; name: string; slug: string }>>;
     slider(slug: string, options?: RequestOptions): Promise<Slider>;
 

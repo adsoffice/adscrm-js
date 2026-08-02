@@ -149,11 +149,31 @@ export function createClient(options = {}) {
 
         /* ── Menü & slider ────────────────────────────────────────── */
 
+        /** Menü künyeleri (id, name, slug) — ağaç olmadan. */
         menus(opts) {
             return data(call('menus', opts));
         },
-        menu(slug, opts) {
-            return data(call(`menus/${slug}`, opts));
+
+        /**
+         * Sitenin **tüm** menüleri, hiyerarşik öğeleriyle tek istekte.
+         * `{ locales: 'all' }` ile her menü `items` yerine `items_by_locale` taşır.
+         * Yanıt `{ data, meta }` biçimindedir; yalnızca diziyi isterseniz `menuMap()`.
+         */
+        menuTree({ locales, ...opts } = {}) {
+            return call('menus/tree', { ...opts, query: { locales, ...(opts.query || {}) } });
+        },
+
+        /** Aynı veri, `slug → menü` haritası olarak: `menus.header.items`. */
+        async menuMap(opts) {
+            const res = await client.menuTree(opts);
+            const out = {};
+            for (const menu of res.data || []) out[menu.slug] = menu;
+            return out;
+        },
+
+        /** Tek menü — **slug ya da id** ile (`menu('header')` · `menu(1)`). */
+        menu(slugOrId, opts) {
+            return data(call(`menus/${slugOrId}`, opts));
         },
         sliders(opts) {
             return data(call('sliders', opts));

@@ -1,7 +1,8 @@
 import type { ReactNode, RefObject, FormEvent } from 'react';
 import type {
     AdsCrmClient, CaptchaProvider, ContentItem, ContentType, FormField, FormSchema,
-    ListResponse, Locale, Menu, RequestOptions, SearchResponse, Site, Slider, StringMap, SubmitResult, View,
+    ListResponse, Locale, Menu, MenuTreeEntry, MenuTreeResponse, RequestOptions,
+    SearchResponse, Site, Slider, StringMap, SubmitResult, View,
 } from './index.js';
 
 export interface AdsCrmContextValue {
@@ -46,7 +47,15 @@ export function useList(
 
 export function useItem(typeSlug: string, itemSlug: string, options?: RequestOptions): QueryResult<ContentItem>;
 export function usePage(typeSlug: string, options?: RequestOptions): QueryResult<ContentItem | null>;
-export function useMenu(slug: string, options?: RequestOptions): QueryResult<Menu>;
+export function useMenu(slugOrId: string | number, options?: RequestOptions): QueryResult<Menu>;
+
+export function useMenuTree(
+    options?: RequestOptions & { locales?: 'all' },
+): QueryResult<MenuTreeResponse> & {
+    menus: MenuTreeEntry[];
+    bySlug: Record<string, MenuTreeEntry>;
+    meta: MenuTreeResponse['meta'] | null;
+};
 export function useSlider(slug: string, options?: RequestOptions): QueryResult<Slider>;
 export function useView(slug: string, options?: RequestOptions): QueryResult<View>;
 export function useBlocks(slug: string, options?: RequestOptions): QueryResult<Record<string, unknown>> & {

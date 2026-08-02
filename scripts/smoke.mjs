@@ -100,7 +100,25 @@ await step('resolveRoute() saf fonksiyon', () => resolveRoute('/', { site, types
 console.log('\n── menü · slider · view · strings ─────────');
 await step('menus()', async () => (await cms.menus()).map((m) => m.slug).join(', ') || '—');
 const menus = await cms.menus();
-if (menus[0]) await step(`menu('${menus[0].slug}')`, async () => (await cms.menu(menus[0].slug)).items.length + ' öğe');
+if (menus[0]) {
+    await step(`menu('${menus[0].slug}')`, async () => (await cms.menu(menus[0].slug)).items.length + ' öğe');
+    await step(`menu(${menus[0].id}) [id ile]`, async () => {
+        const byId = await cms.menu(menus[0].id);
+        return `${byId.slug} · ${byId.items.length} öğe`;
+    });
+}
+await step('menuTree()', async () => {
+    const tree = await cms.menuTree();
+    return tree.data.map((m) => `${m.slug}(${m.items.length})`).join(', ') + ` · meta.locale=${tree.meta.locale}`;
+});
+await step('menuMap()', async () => Object.keys(await cms.menuMap()).join(', ') || '—');
+await step("menuTree({locales:'all'})", async () => {
+    const tree = await cms.menuTree({ locales: 'all' });
+    const first = tree.data[0];
+    return first
+        ? `${first.slug} → ${Object.entries(first.items_by_locale).map(([l, i]) => `${l}:${i.length}`).join(' ')}`
+        : 'menü yok';
+});
 const sliders = await cms.sliders();
 await step('sliders()', () => sliders.map((s) => s.slug).join(', ') || '—');
 if (sliders[0]) await step(`slider('${sliders[0].slug}')`, async () => (await cms.slider(sliders[0].slug)).slides.length + ' slayt');
