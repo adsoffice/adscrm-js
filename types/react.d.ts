@@ -1,0 +1,119 @@
+import type { ReactNode, RefObject, FormEvent } from 'react';
+import type {
+    AdsCrmClient, CaptchaProvider, ContentItem, ContentType, FormField, FormSchema,
+    ListResponse, Locale, Menu, RequestOptions, SearchResponse, Site, Slider, StringMap, SubmitResult, View,
+} from './index.js';
+
+export interface AdsCrmContextValue {
+    client: AdsCrmClient;
+    locale: Locale | null;
+    setLocale(locale: Locale): void;
+}
+
+export function AdsCrmProvider(props: { client: AdsCrmClient; locale?: Locale; children?: ReactNode }): JSX.Element;
+export function useAdsCrm(): AdsCrmContextValue;
+
+export interface QueryResult<T> {
+    data: T | null;
+    error: Error | null;
+    isLoading: boolean;
+    isFetching: boolean;
+    refetch(): Promise<T>;
+}
+
+export interface QueryOptions {
+    enabled?: boolean;
+    /** Aynı anahtar bu süre boyunca yeniden çekilmez (ms, varsayılan 30000). */
+    staleTime?: number;
+    initialData?: unknown;
+}
+
+export function useAdsCrmQuery<T>(
+    key: unknown[] | string,
+    fetcher: () => Promise<T>,
+    options?: QueryOptions,
+): QueryResult<T>;
+
+export function invalidateAdsCrm(key?: unknown[] | string): void;
+
+export function useSite(options?: RequestOptions): QueryResult<Site>;
+export function useContentTypes(options?: RequestOptions): QueryResult<ContentType[]>;
+
+export function useList(
+    typeSlug: string,
+    options?: RequestOptions & { page?: number; limit?: number },
+): QueryResult<ListResponse> & { items: ContentItem[]; page: ContentItem | null; meta: ListResponse['meta'] | null };
+
+export function useItem(typeSlug: string, itemSlug: string, options?: RequestOptions): QueryResult<ContentItem>;
+export function usePage(typeSlug: string, options?: RequestOptions): QueryResult<ContentItem | null>;
+export function useMenu(slug: string, options?: RequestOptions): QueryResult<Menu>;
+export function useSlider(slug: string, options?: RequestOptions): QueryResult<Slider>;
+export function useView(slug: string, options?: RequestOptions): QueryResult<View>;
+export function useBlocks(slug: string, options?: RequestOptions): QueryResult<Record<string, unknown>> & {
+    blocks: Record<string, unknown>;
+};
+
+export function useStrings(
+    options?: RequestOptions & { keys?: string[] | string; group?: string; view?: string },
+): QueryResult<StringMap> & { strings: StringMap; t(key: string, fallback?: string): string };
+
+export function useSearch(
+    term: string,
+    options?: RequestOptions & { debounce?: number; limit?: number },
+): QueryResult<SearchResponse> & { results: SearchResponse['data']; meta: SearchResponse['meta'] | null; isEmpty: boolean };
+
+export interface AdsFormCaptcha {
+    enabled: boolean;
+    provider: CaptchaProvider;
+    siteKey: string | null;
+    honeypotField: string;
+    /** math sağlayıcısında soru metni ("3 + 4"). */
+    question: string | null;
+    expiresAt: number | null;
+    answer: string;
+    setAnswer(value: string): void;
+    /** recaptcha/turnstile token'ı — özel widget kullanıyorsanız kendiniz set edin. */
+    token: string;
+    setToken(value: string): void;
+    honeypot: string;
+    setHoneypot(value: string): void;
+    refresh(): Promise<unknown>;
+    /** Widget'ın basılacağı kap (recaptcha/turnstile). */
+    widgetRef: RefObject<HTMLDivElement>;
+    error: string | null;
+}
+
+export interface AdsFormState {
+    schema: FormSchema | null;
+    fields: FormField[];
+    loading: boolean;
+    loadError: Error | null;
+
+    values: Record<string, unknown>;
+    setValue(name: string, value: unknown): void;
+    setValues(values: Record<string, unknown>): void;
+    errors: Record<string, string | undefined>;
+    error: Error | null;
+    message: string | null;
+    submitting: boolean;
+    submitted: boolean;
+
+    submit(): Promise<SubmitResult | null>;
+    onSubmit(event?: FormEvent): Promise<SubmitResult | null>;
+    reset(): void;
+
+    captcha: AdsFormCaptcha;
+}
+
+export function useAdsForm(
+    slug: string,
+    options?: {
+        onSuccess?(result: SubmitResult): void;
+        onError?(error: Error): void;
+        /** İstemci tarafı zorunlu alan/e-posta kontrolü (varsayılan açık). */
+        validate?: boolean;
+    },
+): AdsFormState;
+
+export function Captcha(props: { form: AdsFormState; className?: string; label?: ReactNode }): JSX.Element | null;
+export function HoneypotField(props: { form: AdsFormState }): JSX.Element | null;

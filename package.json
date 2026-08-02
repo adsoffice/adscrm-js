@@ -1,0 +1,57 @@
+{
+  "name": "@adsoffice/adscrm",
+  "version": "0.1.0",
+  "description": "AdsCRM Headless (Delivery) API istemcisi — React / Next.js için salt-okunur içerik + captcha destekli formlar.",
+  "license": "MIT",
+  "type": "module",
+  "sideEffects": false,
+  "main": "./src/index.js",
+  "types": "./types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./types/index.d.ts",
+      "default": "./src/index.js"
+    },
+    "./react": {
+      "types": "./types/react.d.ts",
+      "default": "./src/react/index.js"
+    },
+    "./next": {
+      "types": "./types/next.d.ts",
+      "default": "./src/next/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "src",
+    "types",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "smoke": "node scripts/smoke.mjs",
+    "smoke:react": "node scripts/react-smoke.mjs"
+  },
+  "peerDependencies": {
+    "react": ">=18"
+  },
+  "peerDependenciesMeta": {
+    "react": {
+      "optional": true
+    }
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "keywords": [
+    "adscrm",
+    "headless-cms",
+    "cms",
+    "nextjs",
+    "react",
+    "delivery-api"
+  ],
+  "publishConfig": {
+    "access": "restricted"
+  }
+}
