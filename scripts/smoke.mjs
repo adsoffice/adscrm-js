@@ -43,6 +43,24 @@ const types = await cms.contentTypes();
 await step('contentTypes()', () => types.map((t) => `${t.slug}${t.is_collection ? '' : ' (tekil)'}`).join(', '));
 await step('tracking()', async () => Object.keys(await cms.tracking()).join(', '));
 
+await step('urls()', async () => {
+    const res = await cms.urls();
+    const counts = res.data.reduce((acc, e) => ({ ...acc, [e.kind]: (acc[e.kind] || 0) + 1 }), {});
+    const sample = res.data.find((e) => e.kind === 'page') || res.data[0];
+    return `${res.meta.total} adres (${Object.entries(counts).map(([k, v]) => `${k}:${v}`).join(' ')})`
+        + (sample ? ` · örn. ${sample.ref} → ${JSON.stringify(sample.urls)}` : '');
+});
+await step("urls({kind:'section'})", async () => {
+    const res = await cms.urls({ kind: 'section' });
+    return `${res.data.length} bölüm · hepsi section=${res.data.every((e) => e.kind === 'section')}`;
+});
+await step('urls({flat:true})', async () => {
+    const res = await cms.urls({ flat: true });
+    const first = res.data[0];
+    return `${res.data.length} satır · örn. ${first?.locale} ${first?.url}`;
+});
+await step('urlMap()', async () => Object.keys(await cms.urlMap({ kind: 'section' })).slice(0, 3).join(', '));
+
 console.log('\n── içerik ─────────────────────────────────');
 const collection = types.find((t) => t.is_collection && !t.is_homepage);
 const single = types.find((t) => !t.is_collection && !t.is_homepage);

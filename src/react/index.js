@@ -195,6 +195,28 @@ export function useContentTypes(options) {
     return useAdsCrmQuery(['content-types', locale], () => client.contentTypes(options));
 }
 
+/**
+ * Sitenin tüm public adresleri, her dilde.
+ * `{ urls, byRef, meta }` olarak da açılır: `byRef['p:101'].urls.en`
+ */
+export function useUrls(options = {}) {
+    const { client } = useAdsCrm();
+    const query = useAdsCrmQuery(
+        ['urls', options.kind, options.type, options.limit, options.flat],
+        () => client.urls(options),
+        { staleTime: 60000 },
+    );
+
+    const urls = query.data?.data ?? [];
+    const byRef = useMemo(() => {
+        const out = {};
+        for (const entry of urls) out[entry.ref] = entry;
+        return out;
+    }, [query.data]);
+
+    return { ...query, urls, byRef, meta: query.data?.meta ?? null };
+}
+
 /** Koleksiyon listesi — `{ items, page, meta }` olarak da açılır. */
 export function useList(typeSlug, options = {}) {
     const { client, locale } = useAdsCrm();

@@ -136,6 +136,8 @@ Hepsi `Promise` döner ve son parametre olarak `{ locale, revalidate, tags, cach
 | `cms.defaultLocale()` | Yalnızca varsayılan dil kodu |
 | `cms.tracking()` | GA4/GTM/Pixel kimlikleri + hazır `head_html` / `body_html` |
 | `cms.contentTypes()` | Sitemap: tüm bölümler (`paths` ile birlikte) |
+| `cms.urls()` | **Tüm public adresler**, her dildeki URL'siyle (sitemap.xml / hreflang) |
+| `cms.urlMap()` | Aynısı, `ref → kayıt` haritası olarak |
 | `cms.contentType(slug)` | Tek bölüm (herhangi bir dildeki slug ile) |
 | `cms.list(tip, { page, limit })` | Bölümün alt sayfaları + `page` + `meta` |
 | `cms.item(tip, slug)` | Tek alt sayfa (yoksa `AdsCrmNotFoundError`) |
@@ -157,6 +159,46 @@ Hepsi `Promise` döner ve son parametre olarak `{ locale, revalidate, tags, cach
 | `cms.blocks(slug)` | Aynısı, `key → data` haritası olarak |
 | `cms.strings({ group, keys })` | Dil değişkenleri sözlüğü (`locales: 'all'` → tüm diller) |
 | `cms.string(key)` · `cms.viewStrings(slug)` | Tek değişken / görünüme bağlı değişkenler |
+
+### Tüm URL'ler (sitemap.xml · hreflang)
+
+`cms.urls()` sitedeki her adresi, her dildeki karşılığıyla verir — bölümler, **yayındaki**
+alt sayfalar ve kategoriler:
+
+```js
+const { data, meta } = await cms.urls();
+// data[0] = {
+//   ref: 'p:101', kind: 'page', section: 'haberler',
+//   urls:   { tr: '/haberler/kalem', en: '/en/news/pen' },
+//   labels: { tr: 'Kalem', en: 'Pen' },
+//   updated_at: '2026-07-12T11:20:00+00:00',
+// }
+```
+
+`ref` dilden bağımsız kimliktir (`s:` bölüm · `p:` sayfa · `c:` kategori); aynı hedefin
+diller arası eşlemesi bununla yapılır.
+
+```js
+// app/sitemap.js — Next.js
+import { cms } from '@/lib/cms';
+
+export default async function sitemap() {
+  const { data, meta } = await cms.urls();
+  const origin = 'https://site.com';
+
+  return data.map((entry) => ({
+    url: origin + entry.urls[meta.default_locale],
+    lastModified: entry.updated_at ?? undefined,
+    alternates: {
+      languages: Object.fromEntries(meta.locales.map((l) => [l, origin + entry.urls[l]])),
+    },
+  }));
+}
+```
+
+Seçenekler: `{ kind: 'page' }` (ya da dizi), `{ type: 'haberler' }`, `{ limit }`,
+`{ flat: true }` (dil başına bir satır: `{ ref, url, label, group, locale, kind }`).
+İstemci bileşenlerinde: `const { urls, byRef } = useUrls()`.
 
 ### Navigasyon (menüler)
 
@@ -292,7 +334,7 @@ function Arama() {
 }
 ```
 
-Mevcut hook'lar: `useSite` · `useLocales` · `useContentTypes` · `useList` · `useItem` · `usePage` ·
+Mevcut hook'lar: `useSite` · `useLocales` · `useContentTypes` · `useUrls` · `useList` · `useItem` · `usePage` ·
 `useMenu` · `useMenuTree` · `useSlider` · `useView` · `useBlocks` · `useStrings` ·
 `useSearch` · `useAdsForm` — ve her şey için genel `useAdsCrmQuery(key, fetcher)`.
 

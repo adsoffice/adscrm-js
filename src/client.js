@@ -104,6 +104,35 @@ export function createClient(options = {}) {
             return remember(key, () => data(call('content-types', opts)), 30000);
         },
 
+        /**
+         * Sitenin **tüm public adresleri**, her dildeki URL'siyle:
+         * bölümler + yayındaki alt sayfalar + kategoriler.
+         * `{ data: [{ ref, kind, urls, labels, … }], meta: { locales, default_locale, … } }`
+         *
+         * sitemap.xml, hreflang ve dil değiştirici için tek kaynak.
+         * `{ flat: true }` ile dil başına bir satır döner.
+         */
+        urls({ kind, type, limit, flat, ...opts } = {}) {
+            return call('urls', {
+                ...opts,
+                query: {
+                    kind: Array.isArray(kind) ? kind.join(',') : kind,
+                    type,
+                    limit,
+                    flat: flat ? 1 : undefined,
+                    ...(opts.query || {}),
+                },
+            });
+        },
+
+        /** `ref → kayıt` haritası — bir hedefin diller arası URL'lerini aramak için. */
+        async urlMap(options) {
+            const res = await client.urls(options);
+            const out = {};
+            for (const entry of res.data || []) out[entry.ref] = entry;
+            return out;
+        },
+
         /** Slug (herhangi bir dilde) ile tek bir bölüm. */
         async contentType(slug, opts) {
             const types = await client.contentTypes(opts);

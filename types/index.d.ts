@@ -85,6 +85,61 @@ export interface ContentType {
     fields: FieldDefinition[];
 }
 
+export type LinkKind = 'section' | 'page' | 'category';
+
+/** `GET /urls` kaydı — bir hedefin tüm dillerdeki adresi. */
+export interface SiteUrl {
+    /** Dilden bağımsız kimlik: `s:12` (bölüm) · `p:101` (sayfa) · `c:3` (kategori). */
+    ref: string;
+    kind: LinkKind;
+    /** Bağlı olduğu bölümün varsayılan dildeki slug'ı. */
+    section: string;
+    /** Panelde görünen grup adı (kategorilerde `… · Kategoriler`). */
+    group: string;
+    /** Dil kodu → URL. Varsayılan dil öneksiz, diğerleri `/en` önekli. */
+    urls: Record<Locale, string>;
+    /** Dil kodu → görünen ad. */
+    labels: Record<Locale, string>;
+    /** Yalnızca `page` kayıtlarında. */
+    status?: ContentItem['status'];
+    /** Yalnızca `section` kayıtlarında. */
+    is_homepage?: boolean;
+    is_collection?: boolean;
+    published_at?: string | null;
+    updated_at?: string | null;
+}
+
+/** `?flat=1` biçimi — dil başına bir satır. */
+export interface SiteUrlFlat {
+    ref: string;
+    url: string;
+    label: string;
+    group: string;
+    locale: Locale;
+    kind: LinkKind;
+}
+
+export interface UrlsResponse<T = SiteUrl> {
+    data: T[];
+    meta: {
+        locales: Locale[];
+        default_locale: Locale;
+        total: number;
+        /** `limit` aşıldıysa liste kesilmiştir. */
+        truncated: boolean;
+    };
+}
+
+export interface UrlsOptions extends RequestOptions {
+    kind?: LinkKind | LinkKind[] | string;
+    /** Yalnızca bir bölüm (herhangi bir dildeki slug). */
+    type?: string;
+    /** Bölüm başına alt sayfa üst sınırı (öntanımlı 2000). */
+    limit?: number;
+    /** Dil başına bir satır döndürür. */
+    flat?: boolean;
+}
+
 export interface GalleryValue {
     id: number;
     name: string;
@@ -327,6 +382,12 @@ export interface AdsCrmClient {
 
     contentTypes(options?: RequestOptions): Promise<ContentType[]>;
     contentType(slug: string, options?: RequestOptions): Promise<ContentType | null>;
+
+    /** Sitenin tüm public adresleri, her dilde (sitemap.xml / hreflang). */
+    urls(options?: UrlsOptions & { flat?: false }): Promise<UrlsResponse<SiteUrl>>;
+    urls(options: UrlsOptions & { flat: true }): Promise<UrlsResponse<SiteUrlFlat>>;
+    /** Aynı veri, `ref → kayıt` haritası olarak. */
+    urlMap(options?: UrlsOptions): Promise<Record<string, SiteUrl>>;
 
     list(typeSlug: string, options?: RequestOptions & { page?: number; limit?: number }): Promise<ListResponse>;
     item(typeSlug: string, itemSlug: string, options?: RequestOptions): Promise<ContentItem>;
