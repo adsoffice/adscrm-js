@@ -61,6 +61,22 @@ await step('urls({flat:true})', async () => {
 });
 await step('urlMap()', async () => Object.keys(await cms.urlMap({ kind: 'section' })).slice(0, 3).join(', '));
 
+await step('routes()', async () => {
+    const res = await cms.routes();
+    const first = res.data.sections.find((s) => s.is_collection) || res.data.sections[0];
+    const tr = first?.locales?.[res.data.default_locale];
+    return `${res.meta.sections} bölüm · ${res.meta.total} kalıp · ana sayfa ${JSON.stringify(res.data.homepage)}`
+        + (tr ? ` · örn. ${tr.section} → ${tr.page ?? '(tekil)'}` : '');
+});
+await step("routes({style:'next'})", async () => {
+    const rows = await cms.dynamicRoutes({ style: 'next' });
+    return `${rows.length} dinamik kalıp · örn. ${rows[0]?.path ?? '—'}`;
+});
+await step("routes({kind:'page'})", async () => {
+    const res = await cms.routes({ kind: 'page' });
+    return `${res.data.routes.length} satır · hepsi page=${res.data.routes.every((r) => r.kind === 'page')}`;
+});
+
 console.log('\n── içerik ─────────────────────────────────');
 const collection = types.find((t) => t.is_collection && !t.is_homepage);
 const single = types.find((t) => !t.is_collection && !t.is_homepage);

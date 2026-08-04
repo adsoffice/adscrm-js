@@ -138,6 +138,8 @@ Hepsi `Promise` döner ve son parametre olarak `{ locale, revalidate, tags, cach
 | `cms.contentTypes()` | Sitemap: tüm bölümler (`paths` ile birlikte) |
 | `cms.urls()` | **Tüm public adresler**, her dildeki URL'siyle (sitemap.xml / hreflang) |
 | `cms.urlMap()` | Aynısı, `ref → kayıt` haritası olarak |
+| `cms.routes({ style })` | **Adres yapısı**: bölüm yolları + detay/kategori kalıpları (`/projeler/{slug}`), her dilde |
+| `cms.routeMap()` · `cms.dynamicRoutes()` | Aynısı `yol → satır` haritası / yalnızca dinamik kalıplar |
 | `cms.contentType(slug)` | Tek bölüm (herhangi bir dildeki slug ile) |
 | `cms.list(tip, { page, limit })` | Bölümün alt sayfaları + `page` + `meta` |
 | `cms.item(tip, slug)` | Tek alt sayfa (yoksa `AdsCrmNotFoundError`) |
@@ -199,6 +201,42 @@ export default async function sitemap() {
 Seçenekler: `{ kind: 'page' }` (ya da dizi), `{ type: 'haberler' }`, `{ limit }`,
 `{ flat: true }` (dil başına bir satır: `{ ref, url, label, group, locale, kind }`).
 İstemci bileşenlerinde: `const { urls, byRef } = useUrls()`.
+
+### Adres yapısı (route şeması)
+
+`cms.urls()` **somut** adresleri verir (`/projeler/villa-a`); `cms.routes()` onların
+türetildiği **kalıbı** — içerik sayısından bağımsız, her dilde:
+
+```js
+const { data, meta } = await cms.routes();          // ?style=brace (öntanımlı)
+
+data.homepage;                    // { tr: '/', en: '/en' }
+data.sections[0].locales.tr;      // {
+                                  //   name: 'Projeler', slug: 'projeler',
+                                  //   section:  '/projeler',
+                                  //   page:     '/projeler/{slug}',
+                                  //   category: '/projeler/kategoriler/{slug}',
+                                  //   category_prefix: 'kategoriler',
+                                  // }
+data.routes[1];                   // { kind: 'page', locale: 'tr', ref: 's:12',
+                                  //   section: 'projeler', path: '/projeler/{slug}',
+                                  //   params: ['slug'], is_dynamic: true }
+```
+
+- `sections[]` bölüm bazlı ağaç, `routes[]` aynı bilginin düz hali (dil × tür başına bir satır).
+- Tekil (koleksiyon olmayan) bölümde `page`, kategorisi kapalı bölümde `category` → `null`.
+- `ref` (`s:<id>`) `urls()` ile aynı kimliktir; iki uç bununla eşleşir.
+- Delivery yolları birebir aynıdır — `path`'i doğrudan `cms.raw(path)` ile çağırabilirsiniz.
+
+Seçenekler: `{ style }` → `brace` `{slug}` (öntanımlı) · `next` `[slug]` · `colon` `:slug` ·
+`paren` `(slug)`; `{ kind: 'page' }` (düz listeyi süzer), `{ type: 'projeler' }`.
+İstemci bileşenlerinde: `const { sections, routes, byPath } = useRoutes()`.
+
+```js
+// Next.js — dinamik rotaları şemadan üret
+const dynamic = await cms.dynamicRoutes({ style: 'next' });
+// [{ path: '/projeler/[slug]', locale: 'tr', section: 'projeler', … }, …]
+```
 
 ### Navigasyon (menüler)
 
@@ -334,7 +372,7 @@ function Arama() {
 }
 ```
 
-Mevcut hook'lar: `useSite` · `useLocales` · `useContentTypes` · `useUrls` · `useList` · `useItem` · `usePage` ·
+Mevcut hook'lar: `useSite` · `useLocales` · `useContentTypes` · `useUrls` · `useRoutes` · `useList` · `useItem` · `usePage` ·
 `useMenu` · `useMenuTree` · `useSlider` · `useView` · `useBlocks` · `useStrings` ·
 `useSearch` · `useAdsForm` — ve her şey için genel `useAdsCrmQuery(key, fetcher)`.
 

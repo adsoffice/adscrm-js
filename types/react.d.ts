@@ -2,8 +2,8 @@ import type { ReactNode, RefObject, FormEvent } from 'react';
 import type {
     AdsCrmClient, CaptchaProvider, ContentItem, ContentType, FormField, FormSchema,
     ListResponse, Locale, LocaleInfo, LocalesResponse, Menu, MenuTreeEntry, MenuTreeResponse,
-    RequestOptions, SearchResponse, Site, SiteUrl, Slider, StringMap, SubmitResult,
-    UrlsOptions, UrlsResponse, View,
+    RequestOptions, RoutesOptions, RoutesResponse, SearchResponse, SectionRoutes, Site,
+    SiteRoute, SiteUrl, Slider, StringMap, SubmitResult, UrlsOptions, UrlsResponse, View,
 } from './index.js';
 
 export interface AdsCrmContextValue {
@@ -55,6 +55,16 @@ export function useUrls(options?: UrlsOptions): QueryResult<UrlsResponse> & {
     /** `byRef['p:101'].urls.en` */
     byRef: Record<string, SiteUrl>;
     meta: UrlsResponse['meta'] | null;
+};
+
+export function useRoutes(options?: RoutesOptions): QueryResult<RoutesResponse> & {
+    sections: SectionRoutes[];
+    routes: SiteRoute[];
+    /** `byPath['/projeler/{slug}'].section` */
+    byPath: Record<string, SiteRoute>;
+    /** Dil kodu → ana sayfa yolu. */
+    homepage: Record<Locale, string> | null;
+    meta: RoutesResponse['meta'] | null;
 };
 
 export function useList(

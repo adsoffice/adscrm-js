@@ -130,6 +130,84 @@ export interface UrlsResponse<T = SiteUrl> {
     };
 }
 
+/** Dinamik segment biçimi: `{slug}` · `[slug]` · `:slug` · `(slug)`. */
+export type RouteStyle = 'brace' | 'next' | 'colon' | 'paren';
+
+/** Bir bölümün tek bir dildeki yolları. */
+export interface SectionRoutePaths {
+    name: string;
+    slug: string;
+    /** Bölümün **sabit** yolu — kalıp değil: `/projeler` · `/en/projects`. */
+    section: string;
+    /** Detay sayfası kalıbı. Tekil (koleksiyon olmayan) bölümlerde `null`. */
+    page: string | null;
+    /** Kategori listesi kalıbı. Kategoriler kapalıysa `null`. */
+    category: string | null;
+    category_prefix: string | null;
+}
+
+/** `GET /routes` → `data.sections[]`. */
+export interface SectionRoutes {
+    /** `/urls` ile aynı kimlik: `s:12`. */
+    ref: string;
+    id: number;
+    /** Varsayılan dildeki ad ve slug. */
+    name: string;
+    slug: string;
+    is_homepage: boolean;
+    is_collection: boolean;
+    categories_enabled: boolean;
+    /** Bölümün kendi (is_index) sayfası oluşturulmuş mu. */
+    has_index_page: boolean;
+    /** Yayındaki alt sayfa sayısı — somut adresler için `urls()`. */
+    page_count: number;
+    /** Dil kodu → o dildeki yollar. */
+    locales: Record<Locale, SectionRoutePaths>;
+}
+
+/** `GET /routes` → `data.routes[]` (düz liste: dil × tür başına bir satır). */
+export interface SiteRoute {
+    kind: LinkKind;
+    locale: Locale;
+    ref: string;
+    /** Bağlı olduğu bölümün varsayılan dildeki slug'ı. */
+    section: string;
+    /** `/projeler` · `/projeler/{slug}` · `/en/projects/categories/{slug}` */
+    path: string;
+    /** Kalıptaki değişken adları — şimdilik `['slug']` ya da boş. */
+    params: string[];
+    is_dynamic: boolean;
+}
+
+export interface RoutesResponse {
+    data: {
+        locales: Locale[];
+        default_locale: Locale;
+        /** Dil kodu → ana sayfa yolu (`/`, `/en`). */
+        homepage: Record<Locale, string>;
+        sections: SectionRoutes[];
+        routes: SiteRoute[];
+    };
+    meta: {
+        locales: Locale[];
+        default_locale: Locale;
+        /** Kullanılan biçim (tanınmayan değer `brace`'e düşer). */
+        style: RouteStyle;
+        styles: RouteStyle[];
+        sections: number;
+        total: number;
+    };
+}
+
+export interface RoutesOptions extends RequestOptions {
+    /** Dinamik segment biçimi (öntanımlı `brace`). */
+    style?: RouteStyle;
+    /** Düz `routes` listesini süzer. */
+    kind?: LinkKind | LinkKind[] | string;
+    /** Yalnızca bir bölüm (herhangi bir dildeki slug). `homepage`'i etkilemez. */
+    type?: string;
+}
+
 export interface UrlsOptions extends RequestOptions {
     kind?: LinkKind | LinkKind[] | string;
     /** Yalnızca bir bölüm (herhangi bir dildeki slug). */
@@ -388,6 +466,13 @@ export interface AdsCrmClient {
     urls(options: UrlsOptions & { flat: true }): Promise<UrlsResponse<SiteUrlFlat>>;
     /** Aynı veri, `ref → kayıt` haritası olarak. */
     urlMap(options?: UrlsOptions): Promise<Record<string, SiteUrl>>;
+
+    /** Sitenin adres **yapısı**: bölüm yolları + detay/kategori kalıpları, her dilde. */
+    routes(options?: RoutesOptions): Promise<RoutesResponse>;
+    /** Aynı veri, `yol → satır` haritası olarak. */
+    routeMap(options?: RoutesOptions): Promise<Record<string, SiteRoute>>;
+    /** Yalnızca dinamik kalıplar (detay + kategori). */
+    dynamicRoutes(options?: RoutesOptions): Promise<SiteRoute[]>;
 
     list(typeSlug: string, options?: RequestOptions & { page?: number; limit?: number }): Promise<ListResponse>;
     item(typeSlug: string, itemSlug: string, options?: RequestOptions): Promise<ContentItem>;

@@ -133,6 +133,50 @@ export function createClient(options = {}) {
             return out;
         },
 
+        /**
+         * Sitenin **adres yapısı** (route şeması), her dilde. `urls()` somut
+         * adresleri verir (`/projeler/villa-a`); bu uç onların **kalıbını**:
+         * bölüm yolu, detay sayfası kalıbı ve (etkinse) kategori kalıbı.
+         *
+         * `{ data: { locales, default_locale, homepage, sections, routes }, meta }`
+         *
+         * `style`: `brace` → `{slug}` (öntanımlı) · `next` → `[slug]` ·
+         * `colon` → `:slug` · `paren` → `(slug)`.
+         *
+         * ```js
+         * const { data } = await cms.routes({ style: 'next' });
+         * data.sections[0].locales.tr.page   // '/projeler/[slug]'
+         * ```
+         */
+        routes({ style, kind, type, ...opts } = {}) {
+            return call('routes', {
+                ...opts,
+                query: {
+                    style,
+                    kind: Array.isArray(kind) ? kind.join(',') : kind,
+                    type,
+                    ...(opts.query || {}),
+                },
+            });
+        },
+
+        /** `yol → satır` haritası: `map['/projeler/{slug}'].section`. */
+        async routeMap(options) {
+            const res = await client.routes(options);
+            const out = {};
+            for (const row of res.data?.routes || []) out[row.path] = row;
+            return out;
+        },
+
+        /**
+         * Yalnızca **dinamik** kalıplar (detay + kategori) — Next.js'te
+         * `[slug]` klasörlerini/rotalarını üretmek için.
+         */
+        async dynamicRoutes(options) {
+            const res = await client.routes(options);
+            return (res.data?.routes || []).filter((row) => row.is_dynamic);
+        },
+
         /** Slug (herhangi bir dilde) ile tek bir bölüm. */
         async contentType(slug, opts) {
             const types = await client.contentTypes(opts);

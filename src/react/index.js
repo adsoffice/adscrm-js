@@ -217,6 +217,36 @@ export function useUrls(options = {}) {
     return { ...query, urls, byRef, meta: query.data?.meta ?? null };
 }
 
+/**
+ * Sitenin adres **yapısı** (route şeması), her dilde — içerik sayısından bağımsız.
+ * `{ sections, routes, byPath, homepage, meta }` olarak da açılır:
+ * `byPath['/projeler/{slug}'].section`
+ */
+export function useRoutes(options = {}) {
+    const { client } = useAdsCrm();
+    const query = useAdsCrmQuery(
+        ['routes', options.style, options.kind, options.type],
+        () => client.routes(options),
+        { staleTime: 60000 },
+    );
+
+    const routes = query.data?.data?.routes ?? [];
+    const byPath = useMemo(() => {
+        const out = {};
+        for (const row of routes) out[row.path] = row;
+        return out;
+    }, [query.data]);
+
+    return {
+        ...query,
+        sections: query.data?.data?.sections ?? [],
+        routes,
+        byPath,
+        homepage: query.data?.data?.homepage ?? null,
+        meta: query.data?.meta ?? null,
+    };
+}
+
 /** Koleksiyon listesi — `{ items, page, meta }` olarak da açılır. */
 export function useList(typeSlug, options = {}) {
     const { client, locale } = useAdsCrm();
