@@ -401,11 +401,21 @@ export function IletisimFormu() {
       {form.fields.map((field) => (
         <label key={field.name}>
           {field.label}{field.required && ' *'}
-          <input
-            type={field.type === 'email' ? 'email' : 'text'}
-            value={form.values[field.name] ?? ''}
-            onChange={(e) => form.setValue(field.name, e.target.value)}
-          />
+          {field.type === 'select' ? (
+            <select
+              value={form.values[field.name] ?? ''}
+              onChange={(e) => form.setValue(field.name, e.target.value)}
+            >
+              <option value="">—</option>
+              {field.choices.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+            </select>
+          ) : (
+            <input
+              type={field.type === 'email' ? 'email' : 'text'}
+              value={form.values[field.name] ?? ''}
+              onChange={(e) => form.setValue(field.name, e.target.value)}
+            />
+          )}
           {form.errors[field.name] && <span role="alert">{form.errors[field.name]}</span>}
         </label>
       ))}
@@ -418,6 +428,28 @@ export function IletisimFormu() {
   );
 }
 ```
+
+### Çok dilli formlar
+
+Form adı, açıklaması, alan etiketleri ve açılır liste seçenekleri panelde dile göre
+girilebilir. İstemcinin dili (`createClient({ locale })` ya da `AdsCrmProvider`/`setLocale`)
+her isteğe otomatik eklenir, dolayısıyla **ek bir şey yapmanız gerekmez** — şema o dilde gelir.
+
+Tek incelik açılır listelerde: `field.options` **gönderilecek kanonik değerdir** ve her dilde
+aynıdır; kullanıcıya gösterilecek metinler `field.option_labels` içindedir. `useAdsForm`
+bunları sizin için `field.choices` olarak eşler:
+
+```jsx
+{field.choices.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+```
+
+Böylece form hangi dilde doldurulursa doldurulsun panele **aynı değer** düşer; raporlar ve
+gelen kutusu dillere bölünmez. Hook dışında aynı eşlemeyi `fieldChoices(field)` verir,
+kaydedilmiş bir değerin görünen karşılığını `optionLabel(field, value)` (hook içinde
+`form.labelFor(name, value)`) döndürür. Çevirisi girilmemiş satırlarda etiket = değer.
+
+Gönderim yanıtındaki `form.message` de aktif dilde döner (panelde o dil için başarı mesajı
+girilmişse); dil bilgisini paket gönderimle birlikte iletir.
 
 ### Sağlayıcılar
 
@@ -438,7 +470,12 @@ export function IletisimFormu() {
 ### Formu sunucudan göndermek
 
 ```js
+const schema = await cms.form('iletisim');            // istemcinin dilinde
 await cms.submitForm('iletisim', { ad: 'Ali', eposta: 'a@x.com', mesaj: '…' });
+
+// Tek seferlik başka dil:
+await cms.form('iletisim', { locale: 'en' });
+await cms.submitForm('iletisim', values, { locale: 'en' }); // yanıttaki `message` de İngilizce
 ```
 
 Gövde `{ data: { … } }` biçiminde gider; captcha alanları kökte taşınır. Gönderim sınırı

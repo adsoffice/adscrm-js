@@ -121,7 +121,10 @@ export interface AdsFormCaptcha {
 
 export interface AdsFormState {
     schema: FormSchema | null;
+    /** Açılır liste alanlarında `choices` ([{value,label}]) dolu gelir. */
     fields: FormField[];
+    /** Kanonik değerin kullanıcının dilindeki etiketi (özet/onay ekranı için). */
+    labelFor(fieldName: string, value: unknown): string;
     loading: boolean;
     loadError: Error | null;
 

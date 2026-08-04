@@ -61,6 +61,38 @@ export function buildSubmitBody(values = {}, { captcha, honeypot } = {}) {
     return body;
 }
 
+/**
+ * Açılır liste seçenekleri `{ value, label }` çiftleri olarak.
+ *
+ * Çok dilli sitede `options` **gönderilecek kanonik değerdir** (her dilde aynı),
+ * kullanıcıya gösterilecek metinler index'i eşleşen `option_labels` dizisindedir.
+ * Çevirisi girilmemiş satırlarda ikisi aynıdır.
+ *
+ * ```jsx
+ * {fieldChoices(field).map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+ * ```
+ */
+export function fieldChoices(field) {
+    const options = field?.options;
+    if (!Array.isArray(options)) return [];
+
+    const labels = Array.isArray(field.option_labels) ? field.option_labels : [];
+
+    return options.map((value, i) => ({
+        value,
+        label: labels[i] || value,
+    }));
+}
+
+/**
+ * Kanonik değerin görünen etiketi — gönderim özetini/onay ekranını kullanıcının
+ * dilinde göstermek için. Eşleşme yoksa değerin kendisi döner.
+ */
+export function optionLabel(field, value) {
+    const match = fieldChoices(field).find((o) => o.value === value);
+    return match ? match.label : (value ?? '');
+}
+
 /** Form alanları için boş başlangıç değerleri (checkbox → false, çoklu → []). */
 export function initialValues(schema) {
     const out = {};

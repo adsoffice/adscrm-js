@@ -335,12 +335,25 @@ export type StringMatrix = Record<string, Record<Locale, string>>;
 
 export type CaptchaProvider = 'honeypot' | 'math' | 'recaptcha' | 'turnstile';
 
+export interface FormChoice {
+    /** Gönderilecek kanonik değer — her dilde aynı. */
+    value: string;
+    /** Kullanıcıya gösterilecek metin (istenen dilde). */
+    label: string;
+}
+
 export interface FormField {
     name: string;
+    /** İstenen dilde. */
     label: string;
     type: string;
     required?: boolean;
+    /** Açılır liste değerleri — **kanonik**, dilden bağımsız. */
     options?: string[];
+    /** `options` ile aynı sıradaki, istenen dildeki etiketler. */
+    option_labels?: string[];
+    /** `useAdsForm` tarafından eklenir: `options` + `option_labels` çiftleri. */
+    choices?: FormChoice[];
     placeholder?: string;
     default?: unknown;
 }
@@ -349,6 +362,8 @@ export interface FormSchema {
     name: string;
     slug: string;
     description: string | null;
+    /** Şemanın çözüldüğü dil (istenen dil sitede etkin değilse varsayılan). */
+    locale?: Locale;
     fields: FormField[];
     captcha: {
         enabled: boolean;
@@ -579,6 +594,10 @@ export function buildSubmitBody(
     values: Record<string, unknown>,
     options?: { captcha?: CaptchaPayload; honeypot?: string },
 ): Record<string, unknown>;
+/** Açılır liste seçenekleri `{ value, label }` çiftleri olarak (çok dilli formlar). */
+export function fieldChoices(field: FormField | null | undefined): FormChoice[];
+/** Kanonik değerin görünen etiketi; eşleşme yoksa değerin kendisi. */
+export function optionLabel(field: FormField | null | undefined, value: unknown): string;
 export function initialValues(schema: FormSchema | null): Record<string, unknown>;
 export function validateValues(schema: FormSchema | null, values: Record<string, unknown>): Record<string, string>;
 export function loadCaptchaScript(provider: CaptchaProvider): Promise<unknown>;

@@ -18,8 +18,10 @@ import {
 
 import {
     initialValues as buildInitialValues,
+    fieldChoices,
     loadCaptchaScript,
     normalizeCaptcha,
+    optionLabel,
     validateValues,
 } from '../forms.js';
 import { isValidationError } from '../errors.js';
@@ -389,6 +391,13 @@ export function useAdsForm(slug, { onSuccess, onError, validate = true } = {}) {
 
     const settings = useMemo(() => normalizeCaptcha(schema), [schema]);
 
+    // Açılır liste alanlarına `choices` ([{value,label}]) eklenir: `value` her dilde
+    // aynı kanonik değer, `label` istemcinin dilindeki metin. Ham `options` korunur.
+    const fields = useMemo(
+        () => (schema?.fields ?? []).map((f) => (Array.isArray(f.options) ? { ...f, choices: fieldChoices(f) } : f)),
+        [schema],
+    );
+
     // Şema gelince alanları başlat.
     useEffect(() => {
         if (schema) setValues(buildInitialValues(schema));
@@ -540,7 +549,9 @@ export function useAdsForm(slug, { onSuccess, onError, validate = true } = {}) {
 
     return {
         schema,
-        fields: schema?.fields ?? [],
+        fields,
+        /** Kanonik değerin kullanıcının dilindeki etiketi (özet/onay ekranı için). */
+        labelFor: (name, value) => optionLabel(fields.find((f) => f.name === name), value),
         loading: schemaQuery.isLoading,
         loadError: schemaQuery.error,
 

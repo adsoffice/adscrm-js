@@ -11,7 +11,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 
 import { createClient } from '../src/index.js';
 import { AdsCrmProvider, Captcha, useAdsCrm, useAdsCrmQuery, useAdsForm } from '../src/react/index.js';
-import { buildSubmitBody, initialValues, normalizeCaptcha, validateValues } from '../src/forms.js';
+import { buildSubmitBody, fieldChoices, initialValues, normalizeCaptcha, optionLabel, validateValues } from '../src/forms.js';
 
 let failed = 0;
 const check = (label, condition, extra = '') => {
@@ -45,6 +45,26 @@ check(
     'buildSubmitBody() honeypot',
     JSON.stringify(buildSubmitBody({ ad: 'A' }, { captcha: { provider: 'honeypot', field: '_gotcha' }, honeypot: '' }))
         === '{"data":{"ad":"A"},"_gotcha":""}',
+);
+
+// Çok dilli açılır liste: `options` kanonik değer, `option_labels` görünen metin.
+const selectField = {
+    name: 'konu', label: 'Subject', type: 'select',
+    options: ['Genel', 'Destek', 'Satış'],
+    option_labels: ['General', 'Support', ''], // son satır çevrilmemiş
+};
+check(
+    'fieldChoices() değer/etiket eşlemesi',
+    JSON.stringify(fieldChoices(selectField))
+        === '[{"value":"Genel","label":"General"},{"value":"Destek","label":"Support"},{"value":"Satış","label":"Satış"}]',
+);
+check('fieldChoices() seçeneksiz alan', fieldChoices({ name: 'ad', type: 'text' }).length === 0);
+check('optionLabel() çeviri', optionLabel(selectField, 'Destek') === 'Support');
+check('optionLabel() çevrilmemiş satır', optionLabel(selectField, 'Satış') === 'Satış');
+check('optionLabel() bilinmeyen değer', optionLabel(selectField, 'Yok') === 'Yok');
+check(
+    'fieldChoices() option_labels yoksa değere düşer',
+    fieldChoices({ options: ['a', 'b'] }).every((o) => o.value === o.label),
 );
 
 console.log('\n── bileşen render ─────────────────────────');

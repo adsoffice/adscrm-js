@@ -6,7 +6,7 @@
  * Salt okunur uçları çağırır; hiçbir şey yazmaz (form gönderimi denenmez,
  * yalnızca şema + captcha meydan okuması okunur).
  */
-import { isNotFound, resolveRoute, toMetadata, buildSubmitBody } from '../src/index.js';
+import { isNotFound, resolveRoute, toMetadata, buildSubmitBody, fieldChoices } from '../src/index.js';
 import { createCmsClient, staticSectionParams, pageMetadata } from '../src/next/index.js';
 
 const cms = createCmsClient({
@@ -171,7 +171,29 @@ console.log('\n── formlar & captcha ─────────────�
 const formSlug = process.env.ADSCRM_FORM || 'iletisim';
 await step(`form('${formSlug}')`, async () => {
     const schema = await cms.form(formSlug);
-    return `${schema.fields.length} alan · captcha=${schema.captcha.provider} (honeypot alanı: ${schema.captcha.honeypot_field})`;
+    return `${schema.fields.length} alan · dil=${schema.locale ?? '—'} · captcha=${schema.captcha.provider} (honeypot alanı: ${schema.captcha.honeypot_field})`;
+});
+// Açılır liste seçenekleri her dilde aynı `value`, dile göre değişen `label` taşımalı.
+await step(`form('${formSlug}') seçenekleri`, async () => {
+    const schemas = Object.fromEntries(
+        await Promise.all(site.locales.map(async (l) => [l, await cms.form(formSlug, { locale: l })])),
+    );
+    const selects = (schemas[site.default_locale]?.fields || []).filter((f) => Array.isArray(f.options));
+    if (!selects.length) return 'açılır liste alanı yok';
+
+    return selects.map((f) => {
+        const perLocale = site.locales.map((l) => {
+            const field = schemas[l].fields.find((x) => x.name === f.name);
+            return `${l}:[${fieldChoices(field).map((o) => o.label).join('|')}]`;
+        });
+        // Kanonik değerler dilden bağımsız olmalı — aksi halde gönderimler dile bölünür.
+        const drift = site.locales.filter(
+            (l) => JSON.stringify(schemas[l].fields.find((x) => x.name === f.name)?.options) !== JSON.stringify(f.options),
+        );
+        if (drift.length) throw new Error(`${f.name}: değerler dile göre değişiyor (${drift.join(',')})`);
+
+        return `${f.name} → ${perLocale.join(' ')}`;
+    }).join(' · ');
 });
 await step(`formCaptcha('${formSlug}')`, async () => JSON.stringify(await cms.formCaptcha(formSlug)));
 await step('buildSubmitBody()', () =>

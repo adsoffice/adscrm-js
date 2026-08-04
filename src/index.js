@@ -35,6 +35,8 @@ export {
     CAPTCHA_SCRIPTS,
     normalizeCaptcha,
     buildSubmitBody,
+    fieldChoices,
+    optionLabel,
     initialValues,
     validateValues,
     loadCaptchaScript,
