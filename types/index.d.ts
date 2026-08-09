@@ -49,19 +49,22 @@ export type CookieTheme = 'light' | 'dark';
 export interface CookieTexts {
     title: string;
     message: string;
+    /** "Kabul Et" butonu. */
     accept_label: string;
-    reject_label: string;
-    settings_label: string;
+    /** "Çerez Politikası" bağlantısının metni. */
     policy_label: string;
 }
 
-/** `GET /cookie` — çerez onay bandı ayarları (metinler diline çözülmüş). */
+/**
+ * `GET /cookie` — çerez onay bandı ayarları (metinler + bağlantı diline çözülmüş).
+ * Yalnızca **Kabul Et** butonu ve bir **Çerez Politikası bağlantısı** vardır
+ * (reddet/ayarlar butonu yoktur).
+ */
 export interface CookieBanner {
     enabled: boolean;
     position: CookiePosition;
     theme: CookieTheme;
-    show_reject: boolean;
-    show_settings: boolean;
+    /** Çerez Politikası sayfasının bağlantısı (istenen dile çözülmüş); yoksa null. */
     policy_link: string | null;
     texts: CookieTexts;
 }

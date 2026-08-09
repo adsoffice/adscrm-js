@@ -342,19 +342,20 @@ const links = await cms.social();
 
 ### Çerez onay bandı
 
-`cms.cookie()` bandın ayarlarını + seçili dile çözülmüş metinlerini verir. Bandı ve
-onay tercihini (cookie/localStorage) **siz** çizip saklarsınız — paket sadece içeriği taşır.
+`cms.cookie()` bandın ayarlarını + seçili dile çözülmüş metin ve bağlantıyı verir.
+Bandda yalnızca **Kabul Et** butonu ve bir **Çerez Politikası bağlantısı** vardır.
+Bandı ve onay tercihini (cookie/localStorage) **siz** çizip saklarsınız — paket sadece
+içeriği taşır.
 
 ```jsx
 const c = await cms.cookie();
-// { enabled, position, theme, show_reject, show_settings, policy_link,
-//   texts: { title, message, accept_label, reject_label, settings_label, policy_label } }
+// { enabled, position, theme, policy_link,
+//   texts: { title, message, accept_label, policy_label } }
 
 if (c.enabled && !localStorage.getItem('cookie-consent')) {
   // banner'ı c.position / c.theme'e göre çiz:
   //   <p>{c.texts.message} {c.policy_link && <a href={c.policy_link}>{c.texts.policy_label}</a>}</p>
   //   <button onClick={() => accept()}>{c.texts.accept_label}</button>
-  //   {c.show_reject && <button onClick={() => reject()}>{c.texts.reject_label}</button>}
 }
 ```
 
