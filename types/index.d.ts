@@ -283,6 +283,12 @@ export type FieldValue =
     | string[] | GalleryValue | CategoryValue[]
     | Record<string, unknown> | unknown[];
 
+/** Kayda özgü serbest özel alan (key/value) — şema alanlarından bağımsız. */
+export interface CustomField {
+    key: string;
+    value: string;
+}
+
 /** İçerik kaydı: sabit alanlar + alan slug'ları → değer. */
 export interface ContentItem {
     id: number;
@@ -291,7 +297,9 @@ export interface ContentItem {
     order: number | null;
     published_at: string | null;
     seo: SeoInfo;
-    [field: string]: FieldValue | SeoInfo | undefined;
+    /** Kayda özel serbest alanlar (sıralı) — ör. proje istatistikleri. */
+    custom_fields: CustomField[];
+    [field: string]: FieldValue | SeoInfo | CustomField[] | undefined;
 }
 
 export interface ListResponse<T = ContentItem> {
