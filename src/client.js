@@ -72,9 +72,14 @@ export function createClient(options = {}) {
 
         /* ── Site künyesi ─────────────────────────────────────────── */
 
-        /** Site adı, etkin diller, varsayılan dil, ana sayfa, izleme kodları. */
+        /**
+         * Site adı, etkin diller, varsayılan dil, ana sayfa, izleme kodları,
+         * sosyal medya bağlantıları (`social`) ve çerez politikası (`cookie`).
+         * `cookie` metinleri istemcinin diline çözülür.
+         */
         site(opts) {
-            return remember('site', () => data(call('site', opts)), 30000);
+            const key = `site:${opts?.locale ?? config.locale ?? ''}`;
+            return remember(key, () => data(call('site', opts)), 30000);
         },
 
         /**
@@ -94,6 +99,26 @@ export function createClient(options = {}) {
         /** Google/Meta izleme kodları + enjekte edilmeye hazır `head_html`/`body_html`. */
         tracking(opts) {
             return data(call('tracking', opts));
+        },
+
+        /**
+         * Sosyal medya bağlantıları — yalnızca **etkin** olanlar, footer için hazır:
+         * `[{ platform, label, url, logo_url, color }]`. `logo_url` panelde özel logo
+         * seçilmişse doludur; değilse `platform` anahtarıyla kendi marka ikonunuzu basın.
+         */
+        social(opts) {
+            return remember(`social:${opts?.locale ?? config.locale ?? ''}`, () => data(call('social', opts)), 30000);
+        },
+
+        /**
+         * Çerez politikası banner ayarları. Metinler istemcinin diline çözülür
+         * (eksik dil varsayılana düşer): `{ enabled, position, theme, show_reject,
+         * show_settings, policy_link, texts: { title, message, accept_label, … } }`.
+         * Banner'ı kendi frontend'iniz çizer; onay tercihini (cookie/localStorage)
+         * de siz saklarsınız.
+         */
+        cookie(opts) {
+            return remember(`cookie:${opts?.locale ?? config.locale ?? ''}`, () => data(call('cookie', opts)), 30000);
         },
 
         /* ── Sitemap ──────────────────────────────────────────────── */

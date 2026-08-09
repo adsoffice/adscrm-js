@@ -131,10 +131,12 @@ Hepsi `Promise` döner ve son parametre olarak `{ locale, revalidate, tags, cach
 
 | Metot | Açıklama |
 |-------|----------|
-| `cms.site()` | Site künyesi: ad, diller, varsayılan dil, ana sayfa, izleme kodları |
+| `cms.site()` | Site künyesi: ad, diller, varsayılan dil, ana sayfa, izleme kodları, sosyal medya, çerez politikası |
 | `cms.locales()` | **Diller**: etkin kodlar, varsayılan, dil başına ad/URL öneki/ana sayfa yolu |
 | `cms.defaultLocale()` | Yalnızca varsayılan dil kodu |
 | `cms.tracking()` | GA4/GTM/Pixel kimlikleri + hazır `head_html` / `body_html` |
+| `cms.social()` | **Sosyal medya** bağlantıları (yalnızca etkin olanlar; footer için hazır) |
+| `cms.cookie()` | **Çerez politikası** banner ayarları (metinler seçili dile çözülmüş) |
 | `cms.contentTypes()` | Sitemap: tüm bölümler (`paths` ile birlikte) |
 | `cms.urls()` | **Tüm public adresler**, her dildeki URL'siyle (sitemap.xml / hreflang) |
 | `cms.urlMap()` | Aynısı, `ref → kayıt` haritası olarak |
@@ -309,6 +311,57 @@ await cms.alternates(type, item);// { tr: '/urunler/sandalye', en: '/en/products
 
 ---
 
+## Sosyal medya ve çerez politikası
+
+Her ikisi de panelden (**Ayarlar → Sosyal Medya** / **Çerez Politikası**) site bazında
+yönetilir; buradan yalnızca okunur. Çerez metinleri çok dillidir ve istemcinin diline
+çözülür (eksik dil varsayılana düşer). İkisi de `cms.site()` künyesinde de gelir.
+
+### Footer'da sosyal medya
+
+`cms.social()` yalnızca **etkin** bağlantıları, marka rengiyle döner. Özel logo
+seçilmişse `logo_url` doludur; değilse `platform` anahtarıyla kendi ikonunuzu basarsınız.
+
+```jsx
+const links = await cms.social();
+// [{ platform: 'instagram', label: 'Instagram', url: 'https://…', logo_url: null, color: '#E4405F' }]
+
+<ul>
+  {links.map((l) => (
+    <li key={l.url}>
+      <a href={l.url} target="_blank" rel="noreferrer" style={{ color: l.color }}>
+        {l.logo_url ? <img src={l.logo_url} alt={l.label} width={20} /> : <MyIcon name={l.platform} />}
+        <span>{l.label}</span>
+      </a>
+    </li>
+  ))}
+</ul>
+```
+
+İstemci bileşenlerinde: `const { links } = useSocial()`.
+
+### Çerez onay bandı
+
+`cms.cookie()` bandın ayarlarını + seçili dile çözülmüş metinlerini verir. Bandı ve
+onay tercihini (cookie/localStorage) **siz** çizip saklarsınız — paket sadece içeriği taşır.
+
+```jsx
+const c = await cms.cookie();
+// { enabled, position, theme, show_reject, show_settings, policy_link,
+//   texts: { title, message, accept_label, reject_label, settings_label, policy_label } }
+
+if (c.enabled && !localStorage.getItem('cookie-consent')) {
+  // banner'ı c.position / c.theme'e göre çiz:
+  //   <p>{c.texts.message} {c.policy_link && <a href={c.policy_link}>{c.texts.policy_label}</a>}</p>
+  //   <button onClick={() => accept()}>{c.texts.accept_label}</button>
+  //   {c.show_reject && <button onClick={() => reject()}>{c.texts.reject_label}</button>}
+}
+```
+
+İstemci bileşenlerinde: `const { enabled, texts, banner } = useCookie()`.
+
+---
+
 ## Önbellek ve tazeleme (Next.js)
 
 `revalidate` ve `tags` doğrudan Next'in `fetch` önbelleğine geçer:
@@ -372,8 +425,8 @@ function Arama() {
 }
 ```
 
-Mevcut hook'lar: `useSite` · `useLocales` · `useContentTypes` · `useUrls` · `useRoutes` · `useList` · `useItem` · `usePage` ·
-`useMenu` · `useMenuTree` · `useSlider` · `useView` · `useBlocks` · `useStrings` ·
+Mevcut hook'lar: `useSite` · `useLocales` · `useSocial` · `useCookie` · `useContentTypes` · `useUrls` · `useRoutes` ·
+`useList` · `useItem` · `usePage` · `useMenu` · `useMenuTree` · `useSlider` · `useView` · `useBlocks` · `useStrings` ·
 `useSearch` · `useAdsForm` — ve her şey için genel `useAdsCrmQuery(key, fetcher)`.
 
 Hepsi `{ data, error, isLoading, isFetching, refetch }` döner; aynı anahtar için istekler

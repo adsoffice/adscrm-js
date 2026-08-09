@@ -24,12 +24,58 @@ export interface TrackingCodes {
     body_html: string | null;
 }
 
+/** Sitenin sosyal medya platform anahtarları (bilinen markalar + yardımcılar). */
+export type SocialPlatform =
+    | 'facebook' | 'instagram' | 'x' | 'youtube' | 'linkedin' | 'tiktok'
+    | 'whatsapp' | 'telegram' | 'pinterest' | 'threads' | 'snapchat' | 'github'
+    | 'email' | 'phone' | 'website' | 'custom';
+
+/** `GET /social` kaydı — yalnızca etkin bağlantılar döner. */
+export interface SocialLink {
+    platform: SocialPlatform | string;
+    /** Görünen ad (özel etiket verilmemişse platformun varsayılan adı). */
+    label: string;
+    url: string;
+    /** Panelde özel logo seçildiyse dolu; değilse `platform` ikonunu kullanın. */
+    logo_url: string | null;
+    /** Platformun marka rengi (hex) — kendi ikonunuzu boyamak için. */
+    color: string;
+}
+
+export type CookiePosition = 'bottom' | 'top' | 'bottom-left' | 'bottom-right' | 'center';
+export type CookieTheme = 'light' | 'dark';
+
+/** Çerez banner metinleri — istenen dile çözülmüş (eksik alan varsayılana düşer). */
+export interface CookieTexts {
+    title: string;
+    message: string;
+    accept_label: string;
+    reject_label: string;
+    settings_label: string;
+    policy_label: string;
+}
+
+/** `GET /cookie` — çerez onay bandı ayarları (metinler diline çözülmüş). */
+export interface CookieBanner {
+    enabled: boolean;
+    position: CookiePosition;
+    theme: CookieTheme;
+    show_reject: boolean;
+    show_settings: boolean;
+    policy_link: string | null;
+    texts: CookieTexts;
+}
+
 export interface Site {
     name: string;
     domain: string | null;
     locales: Locale[];
     default_locale: Locale;
     tracking: TrackingCodes;
+    /** Sosyal medya bağlantıları (yalnızca etkin olanlar). */
+    social: SocialLink[];
+    /** Çerez politikası banner ayarları (metinler varsayılan dile çözülmüş). */
+    cookie: CookieBanner;
     homepage: { name: string; slug: string; paths: Record<Locale, string> } | null;
 }
 
@@ -472,6 +518,10 @@ export interface AdsCrmClient {
     /** Yalnızca varsayılan dil kodu. */
     defaultLocale(options?: RequestOptions): Promise<Locale>;
     tracking(options?: RequestOptions): Promise<Tracking>;
+    /** Sosyal medya bağlantıları (yalnızca etkin olanlar; footer için hazır). */
+    social(options?: RequestOptions): Promise<SocialLink[]>;
+    /** Çerez politikası banner ayarları; metinler istenen dile çözülür. */
+    cookie(options?: RequestOptions): Promise<CookieBanner>;
 
     contentTypes(options?: RequestOptions): Promise<ContentType[]>;
     contentType(slug: string, options?: RequestOptions): Promise<ContentType | null>;

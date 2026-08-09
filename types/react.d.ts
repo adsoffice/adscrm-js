@@ -1,9 +1,10 @@
 import type { ReactNode, RefObject, FormEvent } from 'react';
 import type {
-    AdsCrmClient, CaptchaProvider, ContentItem, ContentType, FormField, FormSchema,
-    ListResponse, Locale, LocaleInfo, LocalesResponse, Menu, MenuTreeEntry, MenuTreeResponse,
-    RequestOptions, RoutesOptions, RoutesResponse, SearchResponse, SectionRoutes, Site,
-    SiteRoute, SiteUrl, Slider, StringMap, SubmitResult, UrlsOptions, UrlsResponse, View,
+    AdsCrmClient, CaptchaProvider, ContentItem, ContentType, CookieBanner, CookieTexts,
+    FormField, FormSchema, ListResponse, Locale, LocaleInfo, LocalesResponse, Menu,
+    MenuTreeEntry, MenuTreeResponse, RequestOptions, RoutesOptions, RoutesResponse,
+    SearchResponse, SectionRoutes, Site, SiteRoute, SiteUrl, Slider, SocialLink, StringMap,
+    SubmitResult, UrlsOptions, UrlsResponse, View,
 } from './index.js';
 
 export interface AdsCrmContextValue {
@@ -48,6 +49,17 @@ export function useLocales(options?: RequestOptions): QueryResult<LocalesRespons
     /** Provider'daki aktif dili değiştirir (hook'lar yeni dille yeniden çeker). */
     switchTo(locale: Locale): void;
 };
+export function useSocial(options?: RequestOptions): QueryResult<SocialLink[]> & {
+    /** Etkin sosyal medya bağlantıları — footer'da doğrudan map'lenir. */
+    links: SocialLink[];
+};
+
+export function useCookie(options?: RequestOptions): QueryResult<CookieBanner> & {
+    banner: CookieBanner | null;
+    enabled: boolean;
+    texts: CookieTexts | null;
+};
+
 export function useContentTypes(options?: RequestOptions): QueryResult<ContentType[]>;
 
 export function useUrls(options?: UrlsOptions): QueryResult<UrlsResponse> & {

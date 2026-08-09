@@ -192,6 +192,31 @@ export function useLocales(options) {
     };
 }
 
+/**
+ * Sosyal medya bağlantıları (yalnızca etkin olanlar).
+ * `{ links }` olarak da açılır — footer'da doğrudan map'lenir.
+ */
+export function useSocial(options) {
+    const { client, locale } = useAdsCrm();
+    const query = useAdsCrmQuery(['social', locale], () => client.social(options));
+    return { ...query, links: query.data ?? [] };
+}
+
+/**
+ * Çerez politikası banner ayarları (metinler seçili dile çözülmüş).
+ * `{ banner, enabled, texts }` olarak da açılır.
+ */
+export function useCookie(options) {
+    const { client, locale } = useAdsCrm();
+    const query = useAdsCrmQuery(['cookie', locale], () => client.cookie(options));
+    return {
+        ...query,
+        banner: query.data ?? null,
+        enabled: !!query.data?.enabled,
+        texts: query.data?.texts ?? null,
+    };
+}
+
 export function useContentTypes(options) {
     const { client, locale } = useAdsCrm();
     return useAdsCrmQuery(['content-types', locale], () => client.contentTypes(options));

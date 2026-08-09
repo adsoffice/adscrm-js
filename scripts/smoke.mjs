@@ -42,6 +42,14 @@ await step('defaultLocale()', () => cms.defaultLocale());
 const types = await cms.contentTypes();
 await step('contentTypes()', () => types.map((t) => `${t.slug}${t.is_collection ? '' : ' (tekil)'}`).join(', '));
 await step('tracking()', async () => Object.keys(await cms.tracking()).join(', '));
+await step('social()', async () => {
+    const links = await cms.social();
+    return `${links.length} bağlantı${links[0] ? ` · örn. ${links[0].platform} → ${links[0].url}` : ''}`;
+});
+await step('cookie()', async () => {
+    const c = await cms.cookie();
+    return `enabled=${c.enabled} · konum=${c.position} · tema=${c.theme} · mesaj="${(c.texts?.message || '').slice(0, 40)}…"`;
+});
 
 await step('urls()', async () => {
     const res = await cms.urls();
