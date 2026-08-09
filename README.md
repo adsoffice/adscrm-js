@@ -573,6 +573,25 @@ try {
 Her kayıt ayrıca `seo: { title, description, slug }` taşır — `toMetadata()` bunu doğrudan
 Next metadata nesnesine çevirir.
 
+### Özel alanlar (`custom_fields`)
+
+Her kayıt, şema alanlarından bağımsız, kayda özgü serbest alanlar taşıyabilir
+(ör. proje istatistikleri). `label` ve `value` istenen dile çözülmüş `string`'tir;
+`key` dilden bağımsız API anahtarıdır. Yoksa `[]` gelir.
+
+```jsx
+const proje = await cms.item('projeler', 'venn02', { locale: 'en' });
+
+<dl>
+  {proje.custom_fields.map((f) => (
+    <div key={f.key}>
+      <dt>{f.label}</dt>   {/* "Completion" */}
+      <dd>{f.value}</dd>   {/* "80%" */}
+    </div>
+  ))}
+</dl>
+```
+
 ---
 
 ## Sürüm ve uyumluluk

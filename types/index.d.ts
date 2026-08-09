@@ -283,9 +283,17 @@ export type FieldValue =
     | string[] | GalleryValue | CategoryValue[]
     | Record<string, unknown> | unknown[];
 
-/** Kayda özgü serbest özel alan (key/value) — şema alanlarından bağımsız. */
+/**
+ * Kayda özgü serbest özel alan — şema alanlarından bağımsız, çok dilli.
+ * Delivery yanıtında `label`/`value` istenen (`?locale=`) dile çözülmüş string'tir
+ * (o dilde değer yoksa ilk dolu değere düşer).
+ */
 export interface CustomField {
+    /** Dilden bağımsız kimlik (API anahtarı). */
     key: string;
+    /** İstenen dile çözülmüş etiket (tanım). */
+    label: string;
+    /** İstenen dile çözülmüş değer. */
     value: string;
 }
 
