@@ -121,6 +121,22 @@ export function createClient(options = {}) {
             return remember(`cookie:${opts?.locale ?? config.locale ?? ''}`, () => data(call('cookie', opts)), 30000);
         },
 
+        /**
+         * Site görselleri (logo, footer logo, beyaz logo, favicon vb.) — panelde
+         * tanımlanan `{ key, label, url }` kayıtları. Dilden bağımsızdır.
+         */
+        images(opts) {
+            return remember('images', () => data(call('images', opts)), 30000);
+        },
+
+        /** Aynı veri, `key → url` haritası olarak: `imageMap().site_logo`. */
+        async imageMap(opts) {
+            const list = await client.images(opts);
+            const out = {};
+            for (const img of list || []) out[img.key] = img.url;
+            return out;
+        },
+
         /* ── Sitemap ──────────────────────────────────────────────── */
 
         /** Sitenin bölümleri (koleksiyonlar + tekil sayfalar), panel sırasıyla. */

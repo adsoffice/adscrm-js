@@ -137,6 +137,7 @@ Hepsi `Promise` döner ve son parametre olarak `{ locale, revalidate, tags, cach
 | `cms.tracking()` | GA4/GTM/Pixel kimlikleri + hazır `head_html` / `body_html` |
 | `cms.social()` | **Sosyal medya** bağlantıları (yalnızca etkin olanlar; footer için hazır) |
 | `cms.cookie()` | **Çerez politikası** banner ayarları (metinler seçili dile çözülmüş) |
+| `cms.images()` · `cms.imageMap()` | **Site görselleri** (logo, favicon…): `{ key, label, url }` / `key → url` haritası |
 | `cms.contentTypes()` | Sitemap: tüm bölümler (`paths` ile birlikte) |
 | `cms.urls()` | **Tüm public adresler**, her dildeki URL'siyle (sitemap.xml / hreflang) |
 | `cms.urlMap()` | Aynısı, `ref → kayıt` haritası olarak |
@@ -361,6 +362,19 @@ if (c.enabled && !localStorage.getItem('cookie-consent')) {
 
 İstemci bileşenlerinde: `const { enabled, texts, banner } = useCookie()`.
 
+### Site görselleri
+
+`cms.images()` panelde tanımlanan görselleri (`{ key, label, url }`) verir; `cms.imageMap()`
+ise `key → url` haritası döndürür. Hazır anahtarlar: `site_logo`, `site_footer_logo`,
+`site_logo_white`, `favicon` (ayrıca özel anahtarlar eklenebilir).
+
+```jsx
+const img = await cms.imageMap();
+<img src={img.site_logo} alt="Logo" />
+```
+
+İstemci bileşenlerinde: `const { byKey } = useSiteImages()` → `byKey.site_logo`.
+
 ---
 
 ## Önbellek ve tazeleme (Next.js)
@@ -426,9 +440,9 @@ function Arama() {
 }
 ```
 
-Mevcut hook'lar: `useSite` · `useLocales` · `useSocial` · `useCookie` · `useContentTypes` · `useUrls` · `useRoutes` ·
-`useList` · `useItem` · `usePage` · `useMenu` · `useMenuTree` · `useSlider` · `useView` · `useBlocks` · `useStrings` ·
-`useSearch` · `useAdsForm` — ve her şey için genel `useAdsCrmQuery(key, fetcher)`.
+Mevcut hook'lar: `useSite` · `useLocales` · `useSocial` · `useCookie` · `useSiteImages` · `useContentTypes` · `useUrls` ·
+`useRoutes` · `useList` · `useItem` · `usePage` · `useMenu` · `useMenuTree` · `useSlider` · `useView` · `useBlocks` ·
+`useStrings` · `useSearch` · `useAdsForm` — ve her şey için genel `useAdsCrmQuery(key, fetcher)`.
 
 Hepsi `{ data, error, isLoading, isFetching, refetch }` döner; aynı anahtar için istekler
 tekilleştirilir ve 30 sn taze sayılır (`staleTime` ile ayarlanır, `invalidateAdsCrm()` ile düşer).

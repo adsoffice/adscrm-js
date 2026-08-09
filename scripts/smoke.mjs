@@ -50,6 +50,10 @@ await step('cookie()', async () => {
     const c = await cms.cookie();
     return `enabled=${c.enabled} · konum=${c.position} · tema=${c.theme} · mesaj="${(c.texts?.message || '').slice(0, 40)}…"`;
 });
+await step('images()', async () => {
+    const imgs = await cms.images();
+    return `${imgs.length} görsel${imgs[0] ? ` · örn. ${imgs[0].key} → ${imgs[0].url}` : ''}`;
+});
 
 await step('urls()', async () => {
     const res = await cms.urls();

@@ -69,6 +69,16 @@ export interface CookieBanner {
     texts: CookieTexts;
 }
 
+/** `GET /images` kaydı — panelde tanımlanan site görseli (logo, favicon vb.). */
+export interface SiteImage {
+    /** Dilden bağımsız anahtar: site_logo, site_footer_logo, site_logo_white, favicon, … */
+    key: string;
+    /** Tanım (görünen ad). */
+    label: string;
+    /** Görselin adresi (medya kütüphanesi URL'i). */
+    url: string;
+}
+
 export interface Site {
     name: string;
     domain: string | null;
@@ -79,6 +89,8 @@ export interface Site {
     social: SocialLink[];
     /** Çerez politikası banner ayarları (metinler varsayılan dile çözülmüş). */
     cookie: CookieBanner;
+    /** Site görselleri (logo, favicon vb.) — { key, label, url }. */
+    images: SiteImage[];
     homepage: { name: string; slug: string; paths: Record<Locale, string> } | null;
 }
 
@@ -541,6 +553,10 @@ export interface AdsCrmClient {
     social(options?: RequestOptions): Promise<SocialLink[]>;
     /** Çerez politikası banner ayarları; metinler istenen dile çözülür. */
     cookie(options?: RequestOptions): Promise<CookieBanner>;
+    /** Site görselleri (logo, favicon vb.) — { key, label, url }. */
+    images(options?: RequestOptions): Promise<SiteImage[]>;
+    /** Aynı veri, `key → url` haritası olarak. */
+    imageMap(options?: RequestOptions): Promise<Record<string, string>>;
 
     contentTypes(options?: RequestOptions): Promise<ContentType[]>;
     contentType(slug: string, options?: RequestOptions): Promise<ContentType | null>;

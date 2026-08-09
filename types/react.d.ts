@@ -3,8 +3,8 @@ import type {
     AdsCrmClient, CaptchaProvider, ContentItem, ContentType, CookieBanner, CookieTexts,
     FormField, FormSchema, ListResponse, Locale, LocaleInfo, LocalesResponse, Menu,
     MenuTreeEntry, MenuTreeResponse, RequestOptions, RoutesOptions, RoutesResponse,
-    SearchResponse, SectionRoutes, Site, SiteRoute, SiteUrl, Slider, SocialLink, StringMap,
-    SubmitResult, UrlsOptions, UrlsResponse, View,
+    SearchResponse, SectionRoutes, Site, SiteImage, SiteRoute, SiteUrl, Slider, SocialLink,
+    StringMap, SubmitResult, UrlsOptions, UrlsResponse, View,
 } from './index.js';
 
 export interface AdsCrmContextValue {
@@ -58,6 +58,12 @@ export function useCookie(options?: RequestOptions): QueryResult<CookieBanner> &
     banner: CookieBanner | null;
     enabled: boolean;
     texts: CookieTexts | null;
+};
+
+export function useSiteImages(options?: RequestOptions): QueryResult<SiteImage[]> & {
+    images: SiteImage[];
+    /** `byKey.site_logo` → url */
+    byKey: Record<string, string>;
 };
 
 export function useContentTypes(options?: RequestOptions): QueryResult<ContentType[]>;

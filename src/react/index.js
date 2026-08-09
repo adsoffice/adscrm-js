@@ -217,6 +217,22 @@ export function useCookie(options) {
     };
 }
 
+/**
+ * Site görselleri (logo, favicon vb.).
+ * `{ images, byKey }` olarak da açılır: `byKey.site_logo` → url.
+ */
+export function useSiteImages(options) {
+    const { client } = useAdsCrm();
+    const query = useAdsCrmQuery(['images'], () => client.images(options));
+    const images = query.data ?? [];
+    const byKey = useMemo(() => {
+        const out = {};
+        for (const img of images) out[img.key] = img.url;
+        return out;
+    }, [query.data]);
+    return { ...query, images, byKey };
+}
+
 export function useContentTypes(options) {
     const { client, locale } = useAdsCrm();
     return useAdsCrmQuery(['content-types', locale], () => client.contentTypes(options));
