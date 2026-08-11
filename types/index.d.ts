@@ -293,9 +293,22 @@ export interface CategoryValue {
     parent_id: number | null;
 }
 
+/**
+ * `relation` alanının değeri — ilişkili sayfanın künyesi. `type` + `slug` ile
+ * ilişkili içerik `cms.item(type, slug)` ile çekilebilir. İlişki yoksa `null`.
+ */
+export interface RelationValue {
+    id: number;
+    slug: string;
+    /** İlişkili sayfanın bağlı olduğu bölümün slug'ı. */
+    type: string | null;
+    /** İlişkili sayfanın başlığı (ilk metin alanı). */
+    title: string | null;
+}
+
 export type FieldValue =
     | string | number | boolean | null
-    | string[] | GalleryValue | CategoryValue[]
+    | string[] | GalleryValue | CategoryValue[] | RelationValue
     | Record<string, unknown> | unknown[];
 
 /**

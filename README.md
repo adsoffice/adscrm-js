@@ -584,6 +584,7 @@ try {
 | `image`, `file` | URL `string` |
 | `gallery` | `{ id, name, slug, images: [{ id, url, alt }] }` |
 | `category` | `[{ id, name, slug, parent_id }]` |
+| `relation` | `{ id, slug, type, title }` — ilişkili sayfa; `cms.item(type, slug)` ile çekilir (yoksa `null`) |
 
 Her kayıt ayrıca `seo: { title, description, slug }` taşır — `toMetadata()` bunu doğrudan
 Next metadata nesnesine çevirir.
