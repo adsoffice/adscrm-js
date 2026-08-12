@@ -11,6 +11,9 @@ AdsCRM **Headless (Delivery) API** istemcisi — React ve Next.js projeleri içi
 > Panel (Management) API'si — içerik yazma, kullanıcı/site yönetimi, süper admin uçları —
 > **bu paketin kapsamı dışındadır.** Paket yalnızca site tokenıyla erişilen public uçları kullanır.
 
+> 📖 **Yeni başlıyorsanız** adım adım frontend rehberi: [docs/GUIDE.tr.md](docs/GUIDE.tr.md)
+> (Türkçe) · [docs/GUIDE.en.md](docs/GUIDE.en.md) (English). Bu README ise tam API referansıdır.
+
 ---
 
 ## Kurulum

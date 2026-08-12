@@ -354,6 +354,8 @@ export interface MenuItem {
     id: number;
     label: string;
     url: string;
+    /** Öğeye bağlanan görselin adresi (medya kütüphanesinden); görsel yoksa null. */
+    image_url: string | null;
     target: '_self' | '_blank';
     children: MenuItem[];
 }
