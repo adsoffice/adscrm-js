@@ -28,7 +28,8 @@
 15. [Önbellek & tazeleme](#15-önbellek--tazeleme)
 16. [Hata yönetimi](#16-hata-yönetimi)
 17. [Yayına alma notları](#17-yayına-alma-notları)
-18. [Referans: panel ekranı → SDK çağrısı haritası](#18-referans-panel-ekranı--sdk-çağrısı-haritası)
+18. [Yönlendirmeler (eski adresler & 404)](#18-yönlendirmeler-eski-adresler--404)
+19. [Referans: panel ekranı → SDK çağrısı haritası](#19-referans-panel-ekranı--sdk-çağrısı-haritası)
 
 ---
 
@@ -758,7 +759,89 @@ bir hata tüm siteyi düşürmek yerine zarifçe geriler.
 
 ---
 
-## 18. Referans: panel ekranı → SDK çağrısı haritası
+## 18. Yönlendirmeler (eski adresler & 404)
+
+Site yenilendiğinde eski adresler 404'e düşer: arama motorlarındaki bağlantılar,
+dış sitelerden gelen linkler, basılı malzemedeki QR kodları… Panelde
+**Web Siteleri → Bağlantı Yöneticisi** ile bunlar yeni hedeflerine bağlanır ve
+siz iki satır kodla uygularsınız.
+
+Kaynak adres panelde **olduğu gibi** saklanır (`/Urunler/Eski_Sayfa.php?id=12`);
+eşleşme büyük/küçük harfe duyarsızdır ve kural başına tip seçilir:
+
+| `match` | Kaynak | Yakaladığı |
+|---|---|---|
+| `exact` | `/eski-sayfa.php` | yalnızca o adres |
+| `prefix` | `/blog` | `/blog` ve altındaki her şey → `/blog/2019/yazi` ⇒ `/haberler/2019/yazi` |
+| `wildcard` | `/urun/*/detay` | `*` yerine geleni yakalar; hedefte `$1`, `$2` |
+| `regex` | `^/haber-(\d+)\.html$` | kalıp; gruplar hedefte `$1`, `$2` |
+
+Ayrıca her kuralda: **yalnızca 404'te çalış** (var olan sayfaları bozmaz),
+**sorgu parametrelerini taşı**, **kalan yolu hedefe ekle**.
+
+### Middleware — her istekte, ek gecikme olmadan
+
+Kural listesi önbelleklenir; eşleştirme paketin içindeki motorla yerelde yapılır
+(sunucudakiyle birebir aynı mantık), yani istek başına CRM'e gidilmez.
+
+```js
+// middleware.js
+import { NextResponse } from 'next/server';
+import { redirectFor } from '@adsoffice/adscrm/next';
+import { cms } from './lib/cms';
+
+export async function middleware(request) {
+  const hit = await redirectFor(cms, request);
+  if (hit) return NextResponse.redirect(hit.target, hit.status);
+
+  // İstenen yolu 404 sayfasına taşı (aşağıdaki adım için).
+  const headers = new Headers(request.headers);
+  headers.set('x-adscrm-path', request.nextUrl.pathname + request.nextUrl.search);
+  return NextResponse.next({ request: { headers } });
+}
+
+export const config = { matcher: ['/((?!_next|api|favicon.ico|images).*)'] };
+```
+
+### 404 sayfası — son çare
+
+Joker/regex kuralları ve "yalnızca 404'te çalış" kuralları burada sunucuda
+çözülür. Ayrıca eşleşme **yoksa** adres panelin **Bulunamayan Adresler**
+günlüğüne yazılır: site yöneticisi hangi eski bağlantıların hâlâ istendiğini
+görür ve tek tıkla kural tanımlar.
+
+```jsx
+// app/not-found.jsx
+import { headers } from 'next/headers';
+import { redirect } from 'next/navigation';
+import { notFoundRedirect } from '@adsoffice/adscrm/next';
+import { cms } from '@/lib/cms';
+
+export default async function NotFound() {
+  const path = (await headers()).get('x-adscrm-path') || '/';
+  const target = await notFoundRedirect(cms, path);
+  if (target) redirect(target);
+
+  return <h1>Sayfa bulunamadı</h1>;
+}
+```
+
+> Yalnızca bu adımı uygularsanız da sistem çalışır: middleware olmadan tüm
+> yönlendirmeler 404 anında çözülür. Middleware'i eklemek, var olmayan sayfaya
+> hiç girmeden yönlendirmeyi anında yapar (ve tıklama sayacı yerine önbellekli
+> listeyi kullanır).
+
+### Elle eşleştirme
+
+```js
+const rules = await cms.redirects();                          // sıralı liste
+await cms.matchRedirect('/blog/2019/eski-yazi', { rules });    // yerel, sayaç artmaz
+await cms.resolveRedirect('/kayip', { missing: true });        // sunucuda, sayaç artar
+```
+
+---
+
+## 19. Referans: panel ekranı → SDK çağrısı haritası
 
 Bir panel ekranına bakıp "ne çağırmalıyım" dediğinizde hızlı başvuru.
 
@@ -781,6 +864,7 @@ Bir panel ekranına bakıp "ne çağırmalıyım" dediğinizde hızlı başvuru.
 | Ayarlar → İzleme | analitik kodları | `cms.tracking()` | — |
 | Ayarlar → Görseller | logo/favicon | `cms.images()` · `cms.imageMap()` | `useSiteImages` |
 | Ayarlar → API | delivery token | `ADSCRM_TOKEN`'ınız | — |
+| Bağlantı Yöneticisi | yönlendirme kuralları + 404 günlüğü | `cms.redirects()` · `redirectFor()` · `notFoundRedirect()` | — |
 
 ---
 

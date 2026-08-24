@@ -31,6 +31,16 @@ export {
 } from './routing.js';
 
 export {
+    normalizeRedirectPath,
+    sortRedirects,
+    matchesRedirect,
+    buildRedirectTarget,
+    findRedirect,
+    isExternalTarget,
+    redirectSpecificity,
+} from './redirects.js';
+
+export {
     CAPTCHA_PROVIDERS,
     CAPTCHA_SCRIPTS,
     normalizeCaptcha,

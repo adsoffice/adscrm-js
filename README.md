@@ -168,6 +168,18 @@ Hepsi `Promise` döner ve son parametre olarak `{ locale, revalidate, tags, cach
 | `cms.strings({ group, keys })` | Dil değişkenleri sözlüğü (`locales: 'all'` → tüm diller) |
 | `cms.string(key)` · `cms.viewStrings(slug)` | Tek değişken / görünüme bağlı değişkenler |
 
+### Yönlendirmeler (bağlantı yöneticisi)
+
+| Metot | Açıklama |
+|-------|----------|
+| `cms.redirects()` | Yayındaki tüm kurallar, eşleşme gücüne göre sıralı (önbelleklenebilir) |
+| `cms.matchRedirect(yol)` | Kuralları **yerelde** eşleştirir — middleware için; tıklama saymaz |
+| `cms.resolveRedirect(yol, { missing })` | Adresi **sunucuda** çözer: tıklama sayar, `missing` ile 404 günlüğüne yazar |
+| `redirectFor(cms, request)` | `/next` girişi — middleware kararı, mutlak hedefle |
+| `notFoundRedirect(cms, yol)` | `/next` girişi — 404 sayfası için son çare |
+
+Ayrıntı ve kurulum: [Yönlendirmeler (404 → yeni adres)](#yönlendirmeler-404--yeni-adres).
+
 ### Tüm URL'ler (sitemap.xml · hreflang)
 
 `cms.urls()` sitedeki her adresi, her dildeki karşılığıyla verir — bölümler, **yayındaki**
@@ -377,6 +389,89 @@ const img = await cms.imageMap();
 ```
 
 İstemci bileşenlerinde: `const { byKey } = useSiteImages()` → `byKey.site_logo`.
+
+---
+
+## Yönlendirmeler (404 → yeni adres)
+
+Panelde **Bağlantı Yöneticisi** ile tanımlanan kurallar: taşınmış ya da kaldırılmış
+adresleri yeni hedeflerine gönderir. Kaynak adres olduğu gibi saklanır
+(`/Urunler/Eski_Sayfa.php?id=12`), eşleşme büyük/küçük harfe duyarsızdır.
+
+| `match` | Kaynak | Yakaladığı |
+|---|---|---|
+| `exact` | `/eski-sayfa.php` | yalnızca o adres |
+| `prefix` | `/blog` | `/blog` ve altındaki her şey (`/blog/2019/yazi` → `/haberler/2019/yazi`) |
+| `wildcard` | `/urun/*/detay` | `*` yerine geleni yakalar; hedefte `$1`, `$2` |
+| `regex` | `^/haber-(\d+)\.html$` | kalıp; gruplar hedefte `$1`, `$2` |
+
+İki kurulum yolu var; **ikisini birlikte** kullanmak en iyisidir.
+
+### 1) Middleware — her istekte, ağ gecikmesi olmadan
+
+Kural listesi önbelleklenir, eşleştirme `@adsoffice/adscrm` içindeki motorla
+yerelde yapılır (sunucudakiyle birebir aynı mantık).
+
+```js
+// middleware.js
+import { NextResponse } from 'next/server';
+import { redirectFor } from '@adsoffice/adscrm/next';
+import { cms } from './lib/cms';
+
+export async function middleware(request) {
+  const hit = await redirectFor(cms, request);
+  if (hit) return NextResponse.redirect(hit.target, hit.status);
+  return NextResponse.next();
+}
+
+export const config = {
+  matcher: ['/((?!_next|api|favicon.ico|images).*)'],
+};
+```
+
+`redirectFor` yalnızca "her zaman çalışsın" kurallarını uygular; panelde
+**"Yalnızca sayfa bulunamazsa (404) çalışsın"** işaretli kurallar burada atlanır —
+onlar var olan sayfaları bozmasın diye 404 akışında çözülür.
+
+### 2) 404 sayfası — son çare (joker/regex + yalnızca-404 kuralları)
+
+Bu çağrı sunucuda çözülür: **tıklama sayılır** ve eşleşme yoksa adres panelin
+**"Bulunamayan Adresler"** günlüğüne yazılır — site yöneticisi hangi eski
+bağlantıların hâlâ istendiğini görüp tek tıkla kural tanımlar.
+
+```jsx
+// app/not-found.jsx
+import { headers } from 'next/headers';
+import { redirect } from 'next/navigation';
+import { notFoundRedirect } from '@adsoffice/adscrm/next';
+import { cms } from '@/lib/cms';
+
+export default async function NotFound() {
+  const path = (await headers()).get('x-adscrm-path') || '/';
+  const target = await notFoundRedirect(cms, path);
+  if (target) redirect(target);
+
+  return <h1>Sayfa bulunamadı</h1>;
+}
+```
+
+> `not-found.jsx` istenen yolu doğrudan bilmez. Middleware'de bir başlık geçirmek
+> en temiz yol: `const headers = new Headers(request.headers); headers.set('x-adscrm-path', request.nextUrl.pathname + request.nextUrl.search); return NextResponse.next({ request: { headers } });`
+
+### Kuralları kendiniz eşleştirmek
+
+```js
+const rules = await cms.redirects();                  // sıralı liste
+const hit = await cms.matchRedirect('/blog/2019/eski-yazi', { rules });
+// → { rule, source: '/blog', target: '/haberler/2019/eski-yazi', type: 'internal', status: 301 }
+
+// Ya da tek adres, sunucuda (tıklama sayar):
+const resolved = await cms.resolveRedirect('/kayip/sayfa', { missing: true });
+// → null  (eşleşme yok — adres panelin 404 günlüğüne yazıldı)
+```
+
+Saf yardımcılar da dışa açıktır: `findRedirect`, `matchesRedirect`,
+`buildRedirectTarget`, `normalizeRedirectPath`, `sortRedirects`.
 
 ---
 

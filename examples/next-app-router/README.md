@@ -6,10 +6,16 @@ olduğu gibi taşıyabilirsiniz.
 ```
 lib/cms.js                     → tek istemci (ISR + cache etiketi)
 app/[[...slug]]/page.jsx       → tüm siteyi karşılayan tek rota
+app/not-found.jsx              → 404 sayfası + yönlendirmelerin son çaresi
 app/providers.jsx              → istemci bileşenleri için AdsCrmProvider
 app/api/revalidate/route.js    → panel webhook'u ile önbellek tazeleme
 components/ContactForm.jsx     → şemadan kurulan, captcha'lı form
+middleware.js                  → panelde tanımlı yönlendirmeler (Bağlantı Yöneticisi)
 ```
+
+> **Yönlendirmeler:** `middleware.js` + `app/not-found.jsx` ikilisi panelin
+> Bağlantı Yöneticisi'ni uygular — eski adresler yeni sayfalara gider, çözümsüz
+> 404'ler panele düşer. Ayrıntı: [rehber §18](../../docs/GUIDE.tr.md#18-yönlendirmeler-eski-adresler--404).
 
 ## Kurulum
 

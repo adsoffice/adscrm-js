@@ -30,7 +30,8 @@
   ],
   "scripts": {
     "smoke": "node scripts/smoke.mjs",
-    "smoke:react": "node scripts/react-smoke.mjs"
+    "smoke:react": "node scripts/react-smoke.mjs",
+    "smoke:redirects": "node scripts/redirect-smoke.mjs"
   },
   "peerDependencies": {
     "react": ">=18"

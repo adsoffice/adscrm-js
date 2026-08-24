@@ -621,6 +621,19 @@ export interface AdsCrmClient {
         options?: RequestOptions & { captcha?: CaptchaPayload; honeypot?: string },
     ): Promise<SubmitResult>;
 
+    /** Yayındaki yönlendirme kuralları — eşleşme gücüne göre sıralı. */
+    redirects(options?: RequestOptions): Promise<RedirectRule[]>;
+    /** Kuralları yerelde eşleştirir (middleware) — tıklama saymaz. */
+    matchRedirect(
+        path: string,
+        options?: RequestOptions & { missing?: boolean; rules?: RedirectRule[] },
+    ): Promise<RedirectMatch | null>;
+    /** Adresi sunucuda çözer: tıklama sayar, `missing` ile 404 günlüğüne yazar. */
+    resolveRedirect(
+        path: string,
+        options?: RequestOptions & { missing?: boolean; query?: string },
+    ): Promise<ResolvedRedirect | null>;
+
     route(path: string | string[]): Promise<RouteMatch>;
     resolve(path: string | string[], options?: RequestOptions & { limit?: number }): Promise<ResolvedPage>;
 
@@ -654,6 +667,74 @@ export class AdsCrmNetworkError extends AdsCrmError {}
 export function isNotFound(error: unknown): boolean;
 export function isValidationError(error: unknown): boolean;
 export function isRateLimited(error: unknown): boolean;
+
+/* ─────────────────────────────────────────────────────── yönlendirmeler */
+
+export type RedirectMatchType = 'exact' | 'prefix' | 'wildcard' | 'regex';
+
+/** Panelde tanımlı bir yönlendirme kuralı (`GET /links` satırı). */
+export interface RedirectRule {
+    /** Kaynak adres, olduğu gibi: "/blog/eski-yazi.php?id=12" · "/urunler/*" */
+    source: string;
+    match: RedirectMatchType;
+    type: 'external' | 'internal';
+    /** Hedef. Joker/regex kurallarında `$1`, `$2` yakalamaları geçebilir. */
+    target: string;
+    status: 301 | 302 | 307 | 308;
+    /** true ise kural yalnızca sayfa 404 verdiğinde uygulanır. */
+    only_when_missing: boolean;
+    /** Gelen sorgu parametreleri hedefe taşınır. */
+    keep_query: boolean;
+    /** Önek/joker eşleşmesinde kalan yol hedefin sonuna eklenir. */
+    append_remainder: boolean;
+    code: string;
+    short_url: string;
+}
+
+/** Yerel eşleşme sonucu (`matchRedirect` / `findRedirect`). */
+export interface RedirectMatch {
+    rule: RedirectRule;
+    source: string;
+    /** Gidilecek adres — yakalamalar yerleştirilmiş, sorgu taşınmış hali. */
+    target: string;
+    type: 'external' | 'internal';
+    status: number;
+}
+
+/** Sunucu çözümü (`resolveRedirect`) — panel tıklamayı sayar. */
+export interface ResolvedRedirect {
+    source: string;
+    match: RedirectMatchType;
+    type: 'external' | 'internal';
+    target: string;
+    status: number;
+}
+
+/** İstek yolunu karşılaştırılabilir hale getirir (sorgu korunur). */
+export function normalizeRedirectPath(value: string): string;
+/** Kuralları eşleşme gücüne göre sıralar (sunucu zaten sıralı verir). */
+export function sortRedirects(rules: RedirectRule[]): RedirectRule[];
+/** Kural bu yola uyuyor mu? Uyuyorsa yakalamalar + kalan yol. */
+export function matchesRedirect(
+    rule: RedirectRule,
+    path: string,
+    query?: string,
+): { captures: string[]; remainder: string } | null;
+/** Hedefi kurar ($1…$9, kalan yol, sorgu taşıma, döngü koruması). */
+export function buildRedirectTarget(
+    rule: RedirectRule,
+    captures?: string[],
+    remainder?: string,
+    query?: string,
+): string | null;
+/** İlk uyan kuralı bulur ve hedefi üretir. */
+export function findRedirect(
+    rules: RedirectRule[],
+    path: string,
+    options?: { missing?: boolean },
+): RedirectMatch | null;
+export function isExternalTarget(url: string): boolean;
+export function redirectSpecificity(rule: RedirectRule): number;
 
 /* ──────────────────────────────────────────────────── yol yardımcıları */
 

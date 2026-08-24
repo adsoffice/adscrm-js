@@ -28,7 +28,8 @@
 15. [Caching & revalidation](#15-caching--revalidation)
 16. [Error handling](#16-error-handling)
 17. [Deployment notes](#17-deployment-notes)
-18. [Reference: panel screen → SDK call map](#18-reference-panel-screen--sdk-call-map)
+18. [Redirects (old URLs & 404s)](#18-redirects-old-urls--404s)
+19. [Reference: panel screen → SDK call map](#19-reference-panel-screen--sdk-call-map)
 
 ---
 
@@ -759,7 +760,88 @@ a transient failure degrades gracefully instead of taking the whole site down.
 
 ---
 
-## 18. Reference: panel screen → SDK call map
+## 18. Redirects (old URLs & 404s)
+
+When a site is rebuilt, its old URLs start returning 404: links in search results,
+inbound links from other sites, QR codes on printed material. The panel's
+**Websites → Link Manager** maps those to their new targets; you apply them with
+two lines of code.
+
+The source URL is stored **verbatim** (`/Products/Old_Page.php?id=12`); matching is
+case-insensitive and each rule picks how it matches:
+
+| `match` | Source | Matches |
+|---|---|---|
+| `exact` | `/old-page.php` | that URL only |
+| `prefix` | `/blog` | `/blog` and everything under it → `/blog/2019/post` ⇒ `/news/2019/post` |
+| `wildcard` | `/product/*/detail` | captures what `*` matched; use `$1`, `$2` in the target |
+| `regex` | `^/news-(\d+)\.html$` | pattern; groups become `$1`, `$2` |
+
+Each rule also has: **only when missing** (never breaks a page that exists),
+**keep query string**, **append the remaining path**.
+
+### Middleware — on every request, with no added latency
+
+The rule list is cached and matched locally by the engine shipped in this package
+(identical logic to the server), so there is no per-request call to the CRM.
+
+```js
+// middleware.js
+import { NextResponse } from 'next/server';
+import { redirectFor } from '@adsoffice/adscrm/next';
+import { cms } from './lib/cms';
+
+export async function middleware(request) {
+  const hit = await redirectFor(cms, request);
+  if (hit) return NextResponse.redirect(hit.target, hit.status);
+
+  // Pass the requested path to the 404 page (next step).
+  const headers = new Headers(request.headers);
+  headers.set('x-adscrm-path', request.nextUrl.pathname + request.nextUrl.search);
+  return NextResponse.next({ request: { headers } });
+}
+
+export const config = { matcher: ['/((?!_next|api|favicon.ico|images).*)'] };
+```
+
+### The 404 page — last resort
+
+Wildcard/regex rules and "only when missing" rules are resolved server-side here.
+And when **nothing** matches, the URL is written to the panel's **Missing URLs**
+log, so the site admin can see which old links are still being requested and turn
+one into a rule with a single click.
+
+```jsx
+// app/not-found.jsx
+import { headers } from 'next/headers';
+import { redirect } from 'next/navigation';
+import { notFoundRedirect } from '@adsoffice/adscrm/next';
+import { cms } from '@/lib/cms';
+
+export default async function NotFound() {
+  const path = (await headers()).get('x-adscrm-path') || '/';
+  const target = await notFoundRedirect(cms, path);
+  if (target) redirect(target);
+
+  return <h1>Page not found</h1>;
+}
+```
+
+> This step alone is enough: without middleware, every redirect is resolved at the
+> moment of the 404. Adding the middleware redirects earlier — the visitor never
+> reaches the missing page.
+
+### Matching by hand
+
+```js
+const rules = await cms.redirects();                        // sorted list
+await cms.matchRedirect('/blog/2019/old-post', { rules });   // local, no hit counted
+await cms.resolveRedirect('/missing', { missing: true });    // server-side, counts a hit
+```
+
+---
+
+## 19. Reference: panel screen → SDK call map
 
 A quick lookup when you're staring at a panel screen and wondering what to call.
 
@@ -782,6 +864,7 @@ A quick lookup when you're staring at a panel screen and wondering what to call.
 | Settings → Tracking | analytics codes | `cms.tracking()` | — |
 | Settings → Images | logo/favicon | `cms.images()` · `cms.imageMap()` | `useSiteImages` |
 | Settings → API | delivery token | your `ADSCRM_TOKEN` | — |
+| Link Manager | redirect rules + 404 log | `cms.redirects()` · `redirectFor()` · `notFoundRedirect()` | — |
 
 ---
 

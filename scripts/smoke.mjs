@@ -6,7 +6,7 @@
  * Salt okunur uçları çağırır; hiçbir şey yazmaz (form gönderimi denenmez,
  * yalnızca şema + captcha meydan okuması okunur).
  */
-import { isNotFound, resolveRoute, toMetadata, buildSubmitBody, fieldChoices } from '../src/index.js';
+import { isNotFound, resolveRoute, toMetadata, buildSubmitBody, fieldChoices, findRedirect } from '../src/index.js';
 import { createCmsClient, staticSectionParams, pageMetadata } from '../src/next/index.js';
 
 const cms = createCmsClient({
@@ -210,6 +210,57 @@ await step(`form('${formSlug}') seçenekleri`, async () => {
 await step(`formCaptcha('${formSlug}')`, async () => JSON.stringify(await cms.formCaptcha(formSlug)));
 await step('buildSubmitBody()', () =>
     JSON.stringify(buildSubmitBody({ ad: 'Ali' }, { captcha: { provider: 'math', answer: 7, token: 'x', expiresAt: 123 } })));
+
+console.log('\n── yönlendirmeler (bağlantı yöneticisi) ───');
+const rules = await cms.redirects();
+await step('redirects()', () => (rules.length
+    ? rules.slice(0, 5).map((r) => `${r.source}[${r.match}]→${r.target}(${r.status})`).join(' · ') + ` (toplam ${rules.length})`
+    : 'kural yok (panelde tanımlanmamış)'));
+
+// Her kural en azından kendi kaynağıyla eşleşmeli.
+await step('matchRedirect() kendi kaynağını bulur', async () => {
+    const rule = rules.find((r) => r.match === 'exact' && !r.only_when_missing);
+    if (!rule) return 'denenecek "her zaman çalışan" tam kural yok';
+
+    const hit = await cms.matchRedirect(rule.source, { rules });
+    if (!hit) throw new Error(`${rule.source} kendi kuralına eşleşmedi`);
+    return `${rule.source} → ${hit.target} (${hit.status})`;
+});
+
+await step('matchRedirect() eşleşmeyen yol → null', async () => {
+    const hit = await cms.matchRedirect('/kesinlikle-boyle-bir-yol-yok-42', { rules });
+    if (hit) throw new Error(`beklenmedik eşleşme: ${hit.target}`);
+    return 'null';
+});
+
+// Saf motor: joker + $1, önek + kalan yol, sorgu taşıma (ağ gerektirmez).
+await step('findRedirect() joker · önek · sorgu', () => {
+    const local = [
+        { source: '/urun/*/detay', match: 'wildcard', type: 'internal', target: '/urunler/$1', status: 301, only_when_missing: false, keep_query: true, append_remainder: true },
+        { source: '/blog', match: 'prefix', type: 'internal', target: '/haberler', status: 301, only_when_missing: false, keep_query: true, append_remainder: true },
+    ];
+    const wild = findRedirect(local, '/URUN/Masa-Lambasi/detay');
+    const prefix = findRedirect(local, '/blog/2019/eski-yazi?utm_source=mail');
+
+    if (wild?.target !== '/urunler/Masa-Lambasi') throw new Error(`joker: ${wild?.target}`);
+    if (prefix?.target !== '/haberler/2019/eski-yazi?utm_source=mail') throw new Error(`önek: ${prefix?.target}`);
+    return `${wild.target} · ${prefix.target}`;
+});
+
+await step('resolveRedirect() sunucuda çözer', async () => {
+    const rule = rules.find((r) => r.match === 'exact');
+    if (!rule) return 'denenecek tam kural yok';
+
+    const hit = await cms.resolveRedirect(rule.source, { missing: true });
+    return hit ? `${rule.source} → ${hit.target} (${hit.status})` : 'sunucu eşleşme bulmadı';
+});
+
+// `missing` verilmeden çağrıldığında 404 günlüğü kirlenmez.
+await step('resolveRedirect() eşleşmeyen → null', async () => {
+    const hit = await cms.resolveRedirect('/kesinlikle-boyle-bir-yol-yok-42');
+    if (hit) throw new Error(`beklenmedik eşleşme: ${hit.target}`);
+    return 'null';
+});
 
 console.log('\n── next.js yardımcıları ───────────────────');
 await step('staticSectionParams()', async () => {

@@ -118,4 +118,86 @@ export function languageAlternates(resolved, site) {
     return alternatePaths(resolved.type, site?.locales || [], item);
 }
 
+/* ── Yönlendirmeler (bağlantı yöneticisi) ─────────────────────── */
+
+/** İstek/URL/yol → `{ path, search, origin }`. `next/server` gerekmez. */
+function readUrl(input) {
+    if (!input) return { path: '/', search: '', origin: null };
+
+    // NextRequest (`nextUrl`) · Request (`url`) · URL · düz yol
+    const url = input.nextUrl ?? (typeof input === 'object' && input.url ? input.url : input);
+
+    if (typeof url === 'object' && url.pathname !== undefined) {
+        return { path: url.pathname, search: url.search || '', origin: url.origin || null };
+    }
+
+    const raw = String(url);
+    if (/^https?:\/\//i.test(raw)) {
+        try {
+            const parsed = new URL(raw);
+            return { path: parsed.pathname, search: parsed.search, origin: parsed.origin };
+        } catch {
+            // düz yol gibi işle
+        }
+    }
+
+    const [path, search] = raw.split('?');
+    return { path, search: search ? `?${search}` : '', origin: null };
+}
+
+/**
+ * Middleware kararı: istek bir yönlendirme kuralına uyuyor mu?
+ * Kural listesi önbelleklenir (istek başına CRM'e gidilmez), eşleştirme
+ * yereldedir. `only_when_missing` kuralları burada **atlanır** — onlar
+ * `notFoundRedirect()` ile 404 akışında çözülür.
+ *
+ * ```js
+ * // middleware.js
+ * export async function middleware(request) {
+ *   const hit = await redirectFor(cms, request);
+ *   if (hit) return NextResponse.redirect(hit.target, hit.status);
+ * }
+ * ```
+ *
+ * @returns `{ target, status, type, source, rule }` ya da `null`
+ */
+export async function redirectFor(client, input, { missing = false, rules, ...opts } = {}) {
+    const { path, search, origin } = readUrl(input);
+    const hit = await client.matchRedirect(`${path}${search}`, { missing, rules, ...opts });
+
+    if (!hit) return null;
+
+    // NextResponse.redirect mutlak adres ister; iç hedefi isteğin köküne bağla.
+    const target = hit.type === 'internal' && origin ? new URL(hit.target, origin).toString() : hit.target;
+
+    return { ...hit, target };
+}
+
+/**
+ * 404 sayfası için son çare: adresi **sunucuda** çözer (joker/regex ve
+ * yalnızca-404 kuralları dahil), tıklamayı sayar ve eşleşme yoksa adresi
+ * panelin "Bulunamayan Adresler" günlüğüne yazar.
+ *
+ * ```js
+ * // app/not-found.jsx
+ * import { redirect } from 'next/navigation';
+ * import { headers } from 'next/headers';
+ *
+ * export default async function NotFound() {
+ *   const path = (await headers()).get('x-invoked-path') ?? '/';
+ *   const target = await notFoundRedirect(cms, path);
+ *   if (target) redirect(target);
+ *   return <h1>Sayfa bulunamadı</h1>;
+ * }
+ * ```
+ *
+ * @returns hedef adres (string) ya da `null`
+ */
+export async function notFoundRedirect(client, path, opts = {}) {
+    const { path: pathname, search } = readUrl(path);
+    const hit = await client.resolveRedirect(`${pathname}${search}`, { missing: true, ...opts });
+
+    return hit?.target ?? null;
+}
+
 export { isNotFound };

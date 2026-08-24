@@ -1,6 +1,8 @@
 import { buildBase, request } from './http.js';
 import { resolveRoute, sectionPath, itemPath, alternatePaths, toSegments } from './routing.js';
 import { buildSubmitBody } from './forms.js';
+import { findRedirect, normalizeRedirectPath } from './redirects.js';
+import { isNotFound } from './errors.js';
 
 const DEFAULTS = {
     locale: undefined,
@@ -365,6 +367,60 @@ export function createClient(options = {}) {
                 revalidate: 0,
                 body: buildSubmitBody(values, { captcha, honeypot }),
             });
+        },
+
+        /* ── Yönlendirmeler (bağlantı yöneticisi) ─────────────────── */
+
+        /**
+         * Panelde tanımlı **aktif** yönlendirme kuralları — eşleşme gücüne göre
+         * sıralı (tam → önek → joker → regex). Liste önbelleklenebilir; asıl
+         * eşleştirme `matchRedirect()` ile yerelde yapılır.
+         */
+        redirects(opts) {
+            return data(call('links', opts));
+        },
+
+        /**
+         * Bir yolu kural listesiyle **yerelde** eşleştirir (middleware için:
+         * istek başına CRM'e gidilmez, yalnızca kural listesi çekilir).
+         * Tıklama saymaz. Eşleşme yoksa `null`.
+         *
+         * ```js
+         * const hit = await cms.matchRedirect(request.nextUrl.pathname + request.nextUrl.search);
+         * if (hit) return NextResponse.redirect(new URL(hit.target, request.url), hit.status);
+         * ```
+         */
+        async matchRedirect(path, { missing = false, rules, ...opts } = {}) {
+            const list = rules || (await client.redirects(opts));
+            return findRedirect(list, path, { missing });
+        },
+
+        /**
+         * Adresi **sunucuda** çözer: joker/regex kuralları panelde uygulanır,
+         * eşleşen kuralın tıklaması sayılır. `missing: true` verilirse
+         * yalnızca-404 kuralları da denenir ve çözümsüz adres panelin
+         * "Bulunamayan Adresler" günlüğüne yazılır. Eşleşme yoksa `null`.
+         *
+         * 404 sayfasında çağırmak için birebir: `app/not-found.jsx`.
+         */
+        async resolveRedirect(path, { missing = false, query, ...opts } = {}) {
+            try {
+                return await data(call('links/resolve', {
+                    revalidate: 0,
+                    cache: 'no-store',
+                    locale: null,
+                    ...opts,
+                    query: {
+                        path: normalizeRedirectPath(path),
+                        missing: missing ? 1 : undefined,
+                        query,
+                        ...(opts.query || {}),
+                    },
+                }));
+            } catch (error) {
+                if (isNotFound(error)) return null;
+                throw error;
+            }
         },
 
         /* ── Rota çözümü ──────────────────────────────────────────── */
