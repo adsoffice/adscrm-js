@@ -218,6 +218,27 @@ export function useCookie(options) {
 }
 
 /**
+ * **Bakım modu (yayın şarteli).** Site panelden pasife alındıysa `enabled` true
+ * olur ve `texts` bakım sayfası başlığı/mesajını taşır (seçili dile çözülmüş).
+ *
+ * ```jsx
+ * const { enabled, texts } = useMaintenance();
+ * if (enabled) return <Maintenance title={texts.title} message={texts.message} />;
+ * ```
+ */
+export function useMaintenance(options) {
+    const { client, locale } = useAdsCrm();
+    // Şartel anlık çalışmalı — kısa tazelik süresi.
+    const query = useAdsCrmQuery(['maintenance', locale], () => client.maintenance(options), { staleTime: 5000 });
+    return {
+        ...query,
+        enabled: !!query.data?.enabled,
+        texts: query.data?.texts ?? null,
+        retryAfter: query.data?.retry_after ?? null,
+    };
+}
+
+/**
  * Site görselleri (logo, favicon vb.).
  * `{ images, byKey }` olarak da açılır: `byKey.site_logo` → url.
  */

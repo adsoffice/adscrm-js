@@ -1,5 +1,6 @@
 import {
     AdsCrmError,
+    AdsCrmMaintenanceError,
     AdsCrmNetworkError,
     AdsCrmNotFoundError,
     AdsCrmRateLimitError,
@@ -61,6 +62,9 @@ export async function request(config, path, options = {}) {
     const resolvedLocale = locale !== undefined ? locale : query.locale !== undefined ? query.locale : config.locale;
     if (resolvedLocale) params.locale = resolvedLocale;
     else delete params.locale;
+
+    // Bakım modu önizleme anahtarı — panelde üretilir, siteyi pasifken de açar.
+    if (config.previewKey && params.preview === undefined) params.preview = config.previewKey;
 
     const url = `${config.base}/${String(path).replace(/^\/+/, '')}${queryString(params)}`;
 
@@ -136,8 +140,12 @@ export async function request(config, path, options = {}) {
 
         if (response.ok) return payload;
 
+        // Bakım modu (503 + `maintenance` künyesi) geçici bir sunucu hatası DEĞİL —
+        // yeniden denemek anlamsız, doğrudan bakım hatası fırlatılır.
+        const inMaintenance = response.status === 503 && payload && payload.maintenance;
+
         // 5xx geçici olabilir → yeniden dene.
-        if (response.status >= 500 && attempt < maxRetries) {
+        if (response.status >= 500 && !inMaintenance && attempt < maxRetries) {
             attempt += 1;
             await sleep(config.retryDelay * attempt);
             continue;
@@ -146,6 +154,13 @@ export async function request(config, path, options = {}) {
         const message = (payload && payload.message) || `AdsCRM ${response.status}`;
         const meta = { url, body: payload, status: response.status };
 
+        if (inMaintenance) {
+            throw new AdsCrmMaintenanceError(message, {
+                ...meta,
+                maintenance: payload.maintenance,
+                retryAfter: Number(response.headers?.get?.('Retry-After')) || payload.maintenance?.retry_after || null,
+            });
+        }
         if (response.status === 404) throw new AdsCrmNotFoundError(message, meta);
         if (response.status === 422) throw new AdsCrmValidationError(message, { ...meta, errors: payload?.errors });
         if (response.status === 429) {

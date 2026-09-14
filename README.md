@@ -141,6 +141,9 @@ Hepsi `Promise` döner ve son parametre olarak `{ locale, revalidate, tags, cach
 | `cms.social()` | **Sosyal medya** bağlantıları (yalnızca etkin olanlar; footer için hazır) |
 | `cms.cookie()` | **Çerez politikası** banner ayarları (metinler seçili dile çözülmüş) |
 | `cms.images()` · `cms.imageMap()` | **Site görselleri** (logo, favicon…): `{ key, label, url }` / `key → url` haritası |
+| `cms.maintenance()` | **Bakım modu (yayın şarteli)**: `{ enabled, retry_after, texts }` — site pasifse `enabled: true` |
+| `cms.isLive()` | Site yayında mı? (bakım kapalıysa `true`) |
+| `cms.guard(fn)` | Bir çağrıyı bakıma karşı korur: `{ ok, data, maintenance }` |
 | `cms.contentTypes()` | Sitemap: tüm bölümler (`paths` ile birlikte) |
 | `cms.urls()` | **Tüm public adresler**, her dildeki URL'siyle (sitemap.xml / hreflang) |
 | `cms.urlMap()` | Aynısı, `ref → kayıt` haritası olarak |
@@ -377,6 +380,94 @@ if (c.enabled && !localStorage.getItem('cookie-consent')) {
 
 İstemci bileşenlerinde: `const { enabled, texts, banner } = useCookie()`.
 
+### Bakım modu (yayın şarteli)
+
+Panelde **Ayarlar → Site Durumu** altında her sitenin bir **yayın şarteli** vardır.
+Şartel öntanımlı **açıktır** (site yayında). Müşteri şarteli kapatınca site pasife
+alınır: Delivery API'nin **içerik uçları `503`** döner ve yanıtta bakım künyesi
+(başlık + mesaj, istenen dile çözülmüş) gelir. Metinler panelden değiştirilebilir;
+girilmezse hazır varsayılanlar kullanılır.
+
+Bakımda da **açık kalan** uçlar — bakım sayfasının logosunu, dilini ve sabit
+metinlerini çekebilesiniz diye: `site` · `locales` · `images` · `social` · `cookie` ·
+`tracking` · `strings` · `maintenance`.
+
+**En kısa yol — sayfanın en üstünde tek kontrol:**
+
+```jsx
+// app/layout.jsx (ya da her sayfanın başı)
+import { cms } from '@/lib/cms';
+
+export default async function Layout({ children }) {
+  const m = await cms.maintenance();
+  if (m.enabled) {
+    return (
+      <html><body>
+        <main className="maintenance">
+          <h1>{m.texts.title}</h1>
+          <p>{m.texts.message}</p>
+        </main>
+      </body></html>
+    );
+  }
+  return <html><body>{children}</body></html>;
+}
+```
+
+**Alternatif — hatayı yakalayarak** (ekstra istek yok; içerik çağrısı zaten 503 döner):
+
+```jsx
+import { isMaintenance } from '@adsoffice/adscrm';
+
+try {
+  const { data } = await cms.list('haberler');
+  return <Haberler items={data} />;
+} catch (error) {
+  if (isMaintenance(error)) return <Maintenance {...error.texts} />;   // { title, message }
+  throw error;
+}
+```
+
+**`guard()` ile try/catch yazmadan:**
+
+```jsx
+const { ok, data, maintenance } = await cms.guard(() => cms.list('haberler'));
+if (!ok) return <Maintenance {...maintenance.texts} />;
+return <Haberler items={data.data} />;
+```
+
+İstemci bileşenlerinde: `const { enabled, texts } = useMaintenance()`.
+
+**Doğru HTTP durumu döndürün.** Bakım sayfası `200` ile dönerse arama motorları onu
+sitenin gerçek içeriği sanar. Next.js'te:
+
+```js
+// app/maintenance-headers.js — route handler / middleware içinde
+return new Response(html, {
+  status: 503,
+  headers: { 'Retry-After': String(m.retry_after), 'Content-Type': 'text/html; charset=utf-8' },
+});
+```
+
+**Bakımdayken siteyi görüntülemek (önizleme).** Panel her siteye bir önizleme
+anahtarı üretir. Anahtarı istemciye verirseniz site pasifken de içerik döner:
+
+```js
+export const cms = createCmsClient({
+  baseUrl: process.env.ADSCRM_URL,
+  token: process.env.ADSCRM_TOKEN,
+  previewKey: process.env.ADSCRM_PREVIEW_KEY,   // Panel → Ayarlar → Site Durumu
+});
+```
+
+Anahtar verildiğinde her isteğe `?preview=…` olarak eklenir. Ziyaretçiye göre
+açıp kapatmak isterseniz (örn. `?preview=` çerezi olanlara), istemciyi istek başına
+kurun; anahtarı **istemci tarafı JS'e sızdırmayın** (`NEXT_PUBLIC_` kullanmayın).
+
+> Şartelin anlık çalışması için `maintenance()` yanıtı yalnızca 5 sn bellek içinde
+> tutulur. Next.js Data Cache kullanıyorsanız bu çağrıya `{ revalidate: 0 }` verin
+> ya da sitenin CRM önbelleğini kısa tutun.
+
 ### Site görselleri
 
 `cms.images()` panelde tanımlanan görselleri (`{ key, label, url }`) verir; `cms.imageMap()`
@@ -538,7 +629,7 @@ function Arama() {
 }
 ```
 
-Mevcut hook'lar: `useSite` · `useLocales` · `useSocial` · `useCookie` · `useSiteImages` · `useContentTypes` · `useUrls` ·
+Mevcut hook'lar: `useSite` · `useLocales` · `useSocial` · `useCookie` · `useMaintenance` · `useSiteImages` · `useContentTypes` · `useUrls` ·
 `useRoutes` · `useList` · `useItem` · `usePage` · `useMenu` · `useMenuTree` · `useSlider` · `useView` · `useBlocks` ·
 `useStrings` · `useSearch` · `useAdsForm` — ve her şey için genel `useAdsCrmQuery(key, fetcher)`.
 
@@ -667,6 +758,7 @@ try {
 | `AdsCrmNotFoundError` | 404 — yayında değil / yok |
 | `AdsCrmValidationError` | 422 — form doğrulaması veya captcha (`error.fieldErrors()`) |
 | `AdsCrmRateLimitError` | 429 — Delivery 120/dk, form 10/dk |
+| `AdsCrmMaintenanceError` | 503 — site bakım modunda; `error.texts` bakım başlığı/mesajı (`isMaintenance(error)`) |
 | `AdsCrmNetworkError` | Ağ hatası / zaman aşımı (GET'ler 2 kez yeniden denenir) |
 
 ---

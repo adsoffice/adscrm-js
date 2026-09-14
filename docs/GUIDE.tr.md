@@ -677,6 +677,52 @@ if (c.enabled && !localStorage.getItem('cookie-consent')) {
 
 ---
 
+### Bakım modu (yayın şarteli)
+
+**Ayarlar → Site Durumu** altındaki şartel öntanımlı **açıktır** (site yayında).
+Müşteri kapatırsa site pasife alınır: içerik uçları **`503`** döner ve yanıt gövdesinde
+bakım künyesi gelir. Bakım sayfasını **siz** çizersiniz; CRM yalnızca başlık ile mesajı
+(seçili dile çözülmüş) taşır.
+
+Bakımda da açık kalan uçlar: `site` · `locales` · `images` · `social` · `cookie` ·
+`tracking` · `strings` · `maintenance` — yani bakım sayfasının logosu ve dili çekilebilir.
+
+Kök layout'ta tek kontrol yeterlidir:
+
+```jsx
+// app/layout.jsx
+const m = await cms.maintenance();          // { enabled, retry_after, texts: { title, message } }
+if (m.enabled) {
+  return <html><body><Maintenance title={m.texts.title} message={m.texts.message} /></body></html>;
+}
+```
+
+Ek istek istemiyorsanız hatayı yakalayın — içerik çağrısı zaten 503 döner:
+
+```jsx
+import { isMaintenance } from '@adsoffice/adscrm';
+
+try {
+  const { data } = await cms.list('haberler');
+} catch (e) {
+  if (isMaintenance(e)) return <Maintenance {...e.texts} />;
+  throw e;
+}
+```
+
+`cms.guard(fn)` aynısını `try/catch` yazmadan yapar: `{ ok, data, maintenance }`.
+
+**Bakım sayfasını `503` ile döndürün** (`200` dönerseniz arama motorları onu gerçek
+içerik sanar) ve `Retry-After: m.retry_after` başlığını ekleyin.
+
+**Önizleme:** panel her siteye bir anahtar üretir; `createCmsClient({ previewKey })`
+verirseniz istekler `?preview=…` taşır ve site pasifken de içerik döner. Anahtarı
+istemci tarafı JS'e sızdırmayın (`NEXT_PUBLIC_` kullanmayın).
+
+İstemci bileşenlerinde: `const { enabled, texts } = useMaintenance()`.
+
+---
+
 ## 15. Önbellek & tazeleme
 
 Yönetici ile ziyaretçi arasında birbirinden bağımsız iki önbellek katmanı vardır:
@@ -739,6 +785,7 @@ try {
 | `AdsCrmNotFoundError` | 404 — yayında değil / yok |
 | `AdsCrmValidationError` | 422 — form/captcha doğrulaması (`e.fieldErrors()`) |
 | `AdsCrmRateLimitError` | 429 — Delivery 120/dk, formlar 10/dk |
+| `AdsCrmMaintenanceError` | 503 — site bakım modunda; `e.texts` bakım başlığı/mesajı (`isMaintenance(e)`) |
 | `AdsCrmNetworkError` | ağ/zaman aşımı (GET'ler iki kez yeniden denenir) |
 
 **Her** sayfada okunan şeyleri (menüler, site ayarları, routes) `fromCms(...)` ile sarın; geçici
@@ -861,6 +908,7 @@ Bir panel ekranına bakıp "ne çağırmalıyım" dediğinizde hızlı başvuru.
 | Sayfa Görünümleri | bloklar | `cms.view(slug)` · `cms.blocks(slug)` | `useView` · `useBlocks` |
 | Ayarlar → Sosyal | footer bağlantıları | `cms.social()` | `useSocial` |
 | Ayarlar → Çerez | onay bandı | `cms.cookie()` | `useCookie` |
+| Ayarlar → Site Durumu | yayın şarteli + bakım metni | `cms.maintenance()` · `cms.guard()` | `useMaintenance` |
 | Ayarlar → İzleme | analitik kodları | `cms.tracking()` | — |
 | Ayarlar → Görseller | logo/favicon | `cms.images()` · `cms.imageMap()` | `useSiteImages` |
 | Ayarlar → API | delivery token | `ADSCRM_TOKEN`'ınız | — |

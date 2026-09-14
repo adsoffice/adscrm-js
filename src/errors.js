@@ -57,6 +57,30 @@ export class AdsCrmRateLimitError extends AdsCrmError {
     }
 }
 
+/**
+ * 503 — **site bakım modunda** (panelde yayın şarteli kapalı). İçerik uçları
+ * kapalıdır; `maintenance` alanı bakım sayfasını çizmek için gereken künyeyi
+ * taşır: `{ enabled, retry_after, texts: { title, message } }`.
+ *
+ * Bakımda da açık kalan uçlar: `site`, `locales`, `images`, `social`, `cookie`,
+ * `tracking`, `strings` ve `maintenance`.
+ */
+export class AdsCrmMaintenanceError extends AdsCrmError {
+    constructor(message = 'Site bakım modunda.', meta = {}) {
+        super(message, { ...meta, status: 503 });
+        this.name = 'AdsCrmMaintenanceError';
+        /** @type {{ enabled: boolean, retry_after: number, texts: { title: string, message: string } } | null} */
+        this.maintenance = meta.maintenance ?? null;
+        /** Sunucunun önerdiği bekleme süresi (saniye), varsa. */
+        this.retryAfter = meta.retryAfter ?? null;
+    }
+
+    /** Bakım sayfasında basılacak başlık + mesaj. */
+    get texts() {
+        return this.maintenance?.texts ?? null;
+    }
+}
+
 /** Ağ hatası / zaman aşımı — sunucudan yanıt alınamadı. */
 export class AdsCrmNetworkError extends AdsCrmError {
     constructor(message = 'Sunucuya ulaşılamadı.', meta) {
@@ -76,4 +100,10 @@ export function isValidationError(error) {
 
 export function isRateLimited(error) {
     return error instanceof AdsCrmRateLimitError || error?.status === 429;
+}
+
+/** Site bakım modunda mı? Bakım sayfasını göstermeden önce kullanın. */
+export function isMaintenance(error) {
+    return error instanceof AdsCrmMaintenanceError
+        || (error?.status === 503 && !!error?.body?.maintenance);
 }

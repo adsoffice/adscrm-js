@@ -1,7 +1,8 @@
 import type { ReactNode, RefObject, FormEvent } from 'react';
 import type {
     AdsCrmClient, CaptchaProvider, ContentItem, ContentType, CookieBanner, CookieTexts,
-    FormField, FormSchema, ListResponse, Locale, LocaleInfo, LocalesResponse, Menu,
+    FormField, FormSchema, ListResponse, Locale, LocaleInfo, LocalesResponse, MaintenanceInfo,
+    MaintenanceTexts, Menu,
     MenuTreeEntry, MenuTreeResponse, RequestOptions, RoutesOptions, RoutesResponse,
     SearchResponse, SectionRoutes, Site, SiteImage, SiteRoute, SiteUrl, Slider, SocialLink,
     StringMap, SubmitResult, UrlsOptions, UrlsResponse, View,
@@ -58,6 +59,16 @@ export function useCookie(options?: RequestOptions): QueryResult<CookieBanner> &
     banner: CookieBanner | null;
     enabled: boolean;
     texts: CookieTexts | null;
+};
+
+/**
+ * Yayın şarteli (bakım modu). `enabled` true ise site pasiftir ve `texts`
+ * bakım sayfası başlığı/mesajını taşır (seçili dile çözülmüş).
+ */
+export function useMaintenance(options?: RequestOptions): QueryResult<MaintenanceInfo> & {
+    enabled: boolean;
+    texts: MaintenanceTexts | null;
+    retryAfter: number | null;
 };
 
 export function useSiteImages(options?: RequestOptions): QueryResult<SiteImage[]> & {

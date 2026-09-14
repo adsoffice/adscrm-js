@@ -69,6 +69,25 @@ export interface CookieBanner {
     texts: CookieTexts;
 }
 
+/** Bakım sayfası metinleri (istenen dile çözülmüş). */
+export interface MaintenanceTexts {
+    title: string;
+    message: string;
+}
+
+/**
+ * `GET /maintenance` — **yayın şarteli** künyesi. `enabled: true` ise site
+ * panelden pasife alınmıştır: içerik uçları 503 döner ve frontend bunun yerine
+ * bakım sayfasını çizmelidir.
+ */
+export interface MaintenanceInfo {
+    /** Bakım modu açık mı (site pasif)? */
+    enabled: boolean;
+    /** `Retry-After` için önerilen bekleme (saniye). */
+    retry_after: number;
+    texts: MaintenanceTexts;
+}
+
 /** `GET /images` kaydı — panelde tanımlanan site görseli (logo, favicon vb.). */
 export interface SiteImage {
     /** Dilden bağımsız anahtar: site_logo, site_footer_logo, site_logo_white, favicon, … */
@@ -91,6 +110,8 @@ export interface Site {
     cookie: CookieBanner;
     /** Site görselleri (logo, favicon vb.) — { key, label, url }. */
     images: SiteImage[];
+    /** Yayın şarteli — `enabled: true` ise site bakım modunda (pasif). */
+    maintenance: MaintenanceInfo;
     homepage: { name: string; slug: string; paths: Record<Locale, string> } | null;
 }
 
@@ -518,6 +539,11 @@ export interface ClientOptions {
     token?: string;
     /** Varsayılan dil; verilmezse sunucunun varsayılanı kullanılır. */
     locale?: Locale;
+    /**
+     * Bakım modu önizleme anahtarı (Panel → Ayarlar → Site Durumu). Verilirse her
+     * isteğe `?preview=` olarak eklenir ve site pasifken de içerik döner.
+     */
+    previewKey?: string;
     /** Tüm GET istekleri için varsayılan ISR süresi (sn). */
     revalidate?: number | false;
     /** Tüm GET istekleri için varsayılan cache etiketleri. */
@@ -568,6 +594,18 @@ export interface AdsCrmClient {
     social(options?: RequestOptions): Promise<SocialLink[]>;
     /** Çerez politikası banner ayarları; metinler istenen dile çözülür. */
     cookie(options?: RequestOptions): Promise<CookieBanner>;
+    /**
+     * Yayın şarteli künyesi — site pasifse `enabled: true` ve bakım metinleri.
+     * Bu uç bakım modunda da açıktır.
+     */
+    maintenance(options?: RequestOptions): Promise<MaintenanceInfo>;
+    /** Site yayında mı? (bakım modu kapalıysa `true`). */
+    isLive(options?: RequestOptions): Promise<boolean>;
+    /**
+     * Bir çağrıyı bakım moduna karşı korur: site pasifse hata fırlatmak yerine
+     * `{ ok: false, maintenance }` döner.
+     */
+    guard<T>(factory: () => Promise<T>): Promise<{ ok: true; data: T; maintenance: null } | { ok: false; data: null; maintenance: MaintenanceInfo }>;
     /** Site görselleri (logo, favicon vb.) — { key, label, url }. */
     images(options?: RequestOptions): Promise<SiteImage[]>;
     /** Aynı veri, `key → url` haritası olarak. */
@@ -662,11 +700,19 @@ export class AdsCrmValidationError extends AdsCrmError {
 export class AdsCrmRateLimitError extends AdsCrmError {
     retryAfter: number | null;
 }
+/** 503 — site bakım modunda (yayın şarteli kapalı). */
+export class AdsCrmMaintenanceError extends AdsCrmError {
+    maintenance: MaintenanceInfo | null;
+    retryAfter: number | null;
+    readonly texts: MaintenanceTexts | null;
+}
 export class AdsCrmNetworkError extends AdsCrmError {}
 
 export function isNotFound(error: unknown): boolean;
 export function isValidationError(error: unknown): boolean;
 export function isRateLimited(error: unknown): boolean;
+/** Site bakım modunda mı? Bakım sayfasını göstermeden önce kullanın. */
+export function isMaintenance(error: unknown): boolean;
 
 /* ─────────────────────────────────────────────────────── yönlendirmeler */
 

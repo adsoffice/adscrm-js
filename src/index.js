@@ -13,10 +13,12 @@ export {
     AdsCrmNotFoundError,
     AdsCrmValidationError,
     AdsCrmRateLimitError,
+    AdsCrmMaintenanceError,
     AdsCrmNetworkError,
     isNotFound,
     isValidationError,
     isRateLimited,
+    isMaintenance,
 } from './errors.js';
 
 export {

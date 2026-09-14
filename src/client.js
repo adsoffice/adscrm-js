@@ -2,10 +2,11 @@ import { buildBase, request } from './http.js';
 import { resolveRoute, sectionPath, itemPath, alternatePaths, toSegments } from './routing.js';
 import { buildSubmitBody } from './forms.js';
 import { findRedirect, normalizeRedirectPath } from './redirects.js';
-import { isNotFound } from './errors.js';
+import { isMaintenance, isNotFound } from './errors.js';
 
 const DEFAULTS = {
     locale: undefined,
+    previewKey: undefined,
     timeout: 15000,
     retries: 2,
     retryDelay: 300,
@@ -26,8 +27,13 @@ const DEFAULTS = {
  *   locale: 'tr',
  *   revalidate: 60,           // Next.js Data Cache
  *   tags: ['cms'],            // revalidateTag('cms') ile topluca tazele
+ *   previewKey: undefined,    // bakım modunda siteyi görüntülemek için (Panel → Site Durumu)
  * });
  * ```
+ *
+ * Site panelden pasife alınırsa (bakım modu) içerik çağrıları
+ * `AdsCrmMaintenanceError` fırlatır; `isMaintenance(error)` ile yakalayıp
+ * `error.texts` ile bakım sayfanızı çizin. `maintenance()` ucu bakımda da açıktır.
  */
 export function createClient(options = {}) {
     const config = {
@@ -121,6 +127,44 @@ export function createClient(options = {}) {
          */
         cookie(opts) {
             return remember(`cookie:${opts?.locale ?? config.locale ?? ''}`, () => data(call('cookie', opts)), 30000);
+        },
+
+        /**
+         * **Bakım modu (yayın şarteli) künyesi.** Site pasifken içerik uçları 503
+         * döner; bu uç bakımda da açıktır, yani bakım sayfasını tek çağrıyla
+         * çizebilirsiniz: `{ enabled, retry_after, texts: { title, message } }`.
+         * Metinler istemcinin diline çözülür.
+         */
+        maintenance(opts) {
+            return remember(
+                `maintenance:${opts?.locale ?? config.locale ?? ''}`,
+                () => data(call('maintenance', opts)),
+                // Şartel anlık çalışmalı — uzun önbellek site pasifken içerik göstermeye devam ettirir.
+                5000,
+            );
+        },
+
+        /** Site yayında mı? (bakım modu kapalıysa `true`). */
+        async isLive(opts) {
+            return !(await client.maintenance(opts)).enabled;
+        },
+
+        /**
+         * Bir çağrıyı bakım moduna karşı korur: site pasifse veri yerine bakım
+         * künyesi döner, böylece sayfa `try/catch` yazmadan iki durumu da işler.
+         *
+         * ```js
+         * const { ok, data, maintenance } = await cms.guard(() => cms.list('haberler'));
+         * if (!ok) return <Maintenance {...maintenance.texts} />;
+         * ```
+         */
+        async guard(factory) {
+            try {
+                return { ok: true, data: await factory(), maintenance: null };
+            } catch (error) {
+                if (!isMaintenance(error)) throw error;
+                return { ok: false, data: null, maintenance: error.maintenance ?? (await client.maintenance()) };
+            }
         },
 
         /**

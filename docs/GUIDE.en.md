@@ -678,6 +678,55 @@ if (c.enabled && !localStorage.getItem('cookie-consent')) {
 
 ---
 
+### Maintenance mode (the publish switch)
+
+Every site has a **publish switch** under **Settings → Site Status**. It is **on by
+default** (site live). When the owner turns it off the site goes passive: content
+endpoints return **`503`** and the body carries the maintenance notice. **You** render
+the maintenance page; the CMS only supplies the title and message, resolved to the
+requested locale.
+
+Endpoints that stay open during maintenance: `site` · `locales` · `images` · `social` ·
+`cookie` · `tracking` · `strings` · `maintenance` — enough to render a branded,
+localized maintenance page.
+
+One check in the root layout is enough:
+
+```jsx
+// app/layout.jsx
+const m = await cms.maintenance();          // { enabled, retry_after, texts: { title, message } }
+if (m.enabled) {
+  return <html><body><Maintenance title={m.texts.title} message={m.texts.message} /></body></html>;
+}
+```
+
+Prefer no extra request? Catch the error — content calls already return 503:
+
+```jsx
+import { isMaintenance } from '@adsoffice/adscrm';
+
+try {
+  const { data } = await cms.list('news');
+} catch (e) {
+  if (isMaintenance(e)) return <Maintenance {...e.texts} />;
+  throw e;
+}
+```
+
+`cms.guard(fn)` does the same without `try/catch`: `{ ok, data, maintenance }`.
+
+**Serve the maintenance page with `503`** (a `200` makes search engines treat it as
+real content) and add a `Retry-After: m.retry_after` header.
+
+**Preview:** the panel generates a key per site. Pass it as
+`createCmsClient({ previewKey })` and every request carries `?preview=…`, so content is
+returned even while the site is passive. Never expose the key to client-side JS
+(no `NEXT_PUBLIC_`).
+
+In client components: `const { enabled, texts } = useMaintenance()`.
+
+---
+
 ## 15. Caching & revalidation
 
 Two independent cache layers sit between the admin and the visitor:
@@ -740,6 +789,7 @@ try {
 | `AdsCrmNotFoundError` | 404 — not published / doesn't exist |
 | `AdsCrmValidationError` | 422 — form/captcha validation (`e.fieldErrors()`) |
 | `AdsCrmRateLimitError` | 429 — Delivery 120/min, forms 10/min |
+| `AdsCrmMaintenanceError` | 503 — site in maintenance mode; `e.texts` holds the title/message (`isMaintenance(e)`) |
 | `AdsCrmNetworkError` | network/timeout (GETs retry twice) |
 
 For anything read on **every** page (menus, site settings, routes), wrap with `fromCms(...)` so
@@ -861,6 +911,7 @@ A quick lookup when you're staring at a panel screen and wondering what to call.
 | Page Views | composed blocks | `cms.view(slug)` · `cms.blocks(slug)` | `useView` · `useBlocks` |
 | Settings → Social | footer links | `cms.social()` | `useSocial` |
 | Settings → Cookie | consent banner | `cms.cookie()` | `useCookie` |
+| Settings → Site Status | publish switch + maintenance copy | `cms.maintenance()` · `cms.guard()` | `useMaintenance` |
 | Settings → Tracking | analytics codes | `cms.tracking()` | — |
 | Settings → Images | logo/favicon | `cms.images()` · `cms.imageMap()` | `useSiteImages` |
 | Settings → API | delivery token | your `ADSCRM_TOKEN` | — |
