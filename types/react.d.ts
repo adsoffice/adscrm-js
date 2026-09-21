@@ -1,6 +1,7 @@
 import type { ReactNode, RefObject, FormEvent } from 'react';
 import type {
-    AdsCrmClient, CaptchaProvider, ContentItem, ContentType, CookieBanner, CookieTexts,
+    AdsCrmClient, CaptchaProvider, CategoriesOptions, Category, CategoryNode, ContentItem,
+    ContentType, CookieBanner, CookieTexts,
     FormField, FormSchema, ListResponse, Locale, LocaleInfo, LocalesResponse, MaintenanceInfo,
     MaintenanceTexts, Menu,
     MenuTreeEntry, MenuTreeResponse, RequestOptions, RoutesOptions, RoutesResponse,
@@ -103,6 +104,14 @@ export function useList(
 
 export function useItem(typeSlug: string, itemSlug: string, options?: RequestOptions): QueryResult<ContentItem>;
 export function usePage(typeSlug: string, options?: RequestOptions): QueryResult<ContentItem | null>;
+export function useCategories(
+    options?: CategoriesOptions,
+): QueryResult<Category[]> & {
+    categories: Category[];
+    bySlug: Record<string, Category>;
+    tree: CategoryNode[];
+};
+
 export function useMenu(slugOrId: string | number, options?: RequestOptions): QueryResult<Menu>;
 
 export function useMenuTree(

@@ -321,6 +321,54 @@ export function createClient(options = {}) {
             return call('search', { ...opts, query: { q, limit, ...(opts.query || {}) } });
         },
 
+        /* ── Kategoriler ──────────────────────────────────────────── */
+
+        /**
+         * Kategorileri **açık** bölümlerin kategorileri, dile çözülmüş olarak:
+         * `{ id, parent_id, name, slug, description, image, type, path }` + bölümde
+         * tanımlı ek alanlar (`alan_slug → değer`).
+         *
+         * `{ type: 'hizmetler' }` yalnızca o bölümün kategorilerini getirir.
+         *
+         * ```js
+         * const cats = await cms.categories({ type: 'hizmetler' });
+         * cats[0].description   // kategori açıklaması
+         * cats[0].image         // kategori görseli (medya kütüphanesinden)
+         * ```
+         */
+        categories({ type, ...opts } = {}) {
+            return data(call('categories', { ...opts, query: { type, ...(opts.query || {}) } }));
+        },
+
+        /** Aynı veri, `slug → kategori` haritası olarak. */
+        async categoryMap(options) {
+            const out = {};
+            for (const cat of (await client.categories(options)) || []) out[cat.slug] = cat;
+            return out;
+        },
+
+        /**
+         * Kategoriler ağaç olarak: her kayda `children` eklenir, yalnızca kökler
+         * döner. Menü/kırıntı (breadcrumb) çizmek için birebir.
+         */
+        async categoryTree(options) {
+            const list = await client.categories(options);
+            const byId = new Map((list || []).map((c) => [c.id, { ...c, children: [] }]));
+            const roots = [];
+            for (const cat of byId.values()) {
+                const parent = cat.parent_id ? byId.get(cat.parent_id) : null;
+                if (parent) parent.children.push(cat);
+                else roots.push(cat);
+            }
+            return roots;
+        },
+
+        /** Tek kategori — slug ile (bulunamazsa `null`). */
+        async category(slug, options) {
+            const list = await client.categories(options);
+            return (list || []).find((c) => c.slug === slug) || null;
+        },
+
         /* ── Menü & slider ────────────────────────────────────────── */
 
         /** Menü künyeleri (id, name, slug) — ağaç olmadan. */

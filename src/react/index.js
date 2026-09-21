@@ -340,6 +340,34 @@ export function usePage(typeSlug, options) {
     return useAdsCrmQuery(['page', typeSlug, locale], () => client.page(typeSlug, options), { enabled: !!typeSlug });
 }
 
+/**
+ * Kategorileri açık bölümlerin kategorileri (dile çözülmüş, ek alanlarıyla).
+ * `{ categories, bySlug, tree }` olarak da açılır.
+ */
+export function useCategories(options = {}) {
+    const { client, locale } = useAdsCrm();
+    const query = useAdsCrmQuery(['categories', options.type, locale], () => client.categories(options));
+
+    const categories = query.data ?? [];
+    const bySlug = useMemo(() => {
+        const out = {};
+        for (const cat of categories) out[cat.slug] = cat;
+        return out;
+    }, [query.data]);
+    const tree = useMemo(() => {
+        const byId = new Map(categories.map((c) => [c.id, { ...c, children: [] }]));
+        const roots = [];
+        for (const cat of byId.values()) {
+            const parent = cat.parent_id ? byId.get(cat.parent_id) : null;
+            if (parent) parent.children.push(cat);
+            else roots.push(cat);
+        }
+        return roots;
+    }, [query.data]);
+
+    return { ...query, categories, bySlug, tree };
+}
+
 /** Tek menü — slug ya da id ile. */
 export function useMenu(slugOrId, options) {
     const { client, locale } = useAdsCrm();

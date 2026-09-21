@@ -371,6 +371,37 @@ export interface SearchResponse {
     meta: { query: string; total: number };
 }
 
+/**
+ * Dile çözülmüş kategori. Standart alanların yanında, bölümde tanımlı ek
+ * kategori alanları `alan_slug → değer` olarak aynı nesnede gelir.
+ */
+export interface Category {
+    id: number;
+    parent_id: number | null;
+    name: string;
+    slug: string;
+    /** Standart açıklama (istenen dile çözülür). */
+    description: string | null;
+    /** Standart görsel adresi (medya kütüphanesinden; tüm dillerde ortak). */
+    image: string | null;
+    /** Bağlı olduğu bölümün, istenen dildeki slug'ı. */
+    type: string;
+    /** Kategorinin public yolu: `/hizmetler/kategoriler/tadilat`. */
+    path: string;
+    /** Bölümde tanımlı ek alanlar (metin alanları dile göre, görsel/galeri ortak). */
+    [field: string]: unknown;
+}
+
+/** `categoryTree()` çıktısı — alt kategoriler `children` altında. */
+export interface CategoryNode extends Category {
+    children: CategoryNode[];
+}
+
+export interface CategoriesOptions extends RequestOptions {
+    /** Yalnızca bir bölümün kategorileri (bölümün herhangi bir dildeki slug'ı). */
+    type?: string;
+}
+
 export interface MenuItem {
     id: number;
     label: string;
@@ -633,6 +664,15 @@ export interface AdsCrmClient {
     homepage(options?: RequestOptions & { limit?: number }): Promise<ListResponse>;
     allItems(typeSlug: string, options?: RequestOptions & { limit?: number; max?: number }): Promise<ContentItem[]>;
     search(q: string, options?: RequestOptions & { limit?: number }): Promise<SearchResponse>;
+
+    /** Kategorileri açık bölümlerin kategorileri, dile çözülmüş (+ ek alanlar). */
+    categories(options?: CategoriesOptions): Promise<Category[]>;
+    /** Aynı veri, `slug → kategori` haritası olarak. */
+    categoryMap(options?: CategoriesOptions): Promise<Record<string, Category>>;
+    /** Kategoriler ağaç olarak (`children`); yalnızca kökler döner. */
+    categoryTree(options?: CategoriesOptions): Promise<CategoryNode[]>;
+    /** Tek kategori — slug ile; bulunamazsa `null`. */
+    category(slug: string, options?: CategoriesOptions): Promise<Category | null>;
 
     menus(options?: RequestOptions): Promise<Array<{ id: number; name: string; slug: string }>>;
     /** Tüm menüler + ağaçları tek istekte. `locales: 'all'` → `items_by_locale`. */

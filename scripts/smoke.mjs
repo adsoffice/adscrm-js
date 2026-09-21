@@ -151,6 +151,22 @@ await step("resolve('/olmayan-sayfa')", async () => (await cms.resolve('/olmayan
 await step('resolveRoute() saf fonksiyon', () => resolveRoute('/', { site, types }).kind);
 
 console.log('\n── menü · slider · view · strings ─────────');
+console.log('\n── kategoriler ────────────────────────────');
+await step('categories()', async () => {
+    const cats = await cms.categories();
+    if (!cats.length) return 'kategori yok (bölümlerde kategoriler kapalı olabilir)';
+    const first = cats[0];
+    const extra = Object.keys(first).filter((k) => !['id', 'parent_id', 'name', 'slug', 'description', 'image', 'type', 'path'].includes(k));
+    return `${cats.length} kategori · örn. ${first.type}/${first.slug} → ${first.path}`
+        + ` · açıklama=${first.description ? 'var' : 'yok'} · görsel=${first.image ? 'var' : 'yok'}`
+        + (extra.length ? ` · ek alanlar: ${extra.join(', ')}` : '');
+});
+await step('categoryTree()', async () => {
+    const roots = await cms.categoryTree();
+    return roots.map((c) => `${c.slug}(${c.children.length})`).join(', ') || '—';
+});
+
+console.log('\n── menüler & sliderlar ────────────────────');
 await step('menus()', async () => (await cms.menus()).map((m) => m.slug).join(', ') || '—');
 const menus = await cms.menus();
 if (menus[0]) {

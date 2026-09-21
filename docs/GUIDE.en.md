@@ -328,7 +328,7 @@ Every field the admin adds in the **Section builder** appears as a property on t
 | `multiselect` / `json` | `string[]` / `object`\|`array` |
 | `image`, `file` | URL `string` |
 | `gallery` | `{ id, name, slug, images: [{ id, url, alt }] }` |
-| `category` | `[{ id, name, slug, parent_id }]` |
+| `category` | `[{ id, name, slug, parent_id, description, image }]` — use `cms.categories()` for every category field |
 | `relation` | `{ id, slug, type, title }` — fetch the linked entry with `cms.item(type, slug)` |
 
 Every entry also carries `seo: { title, description, slug }` and a `custom_fields` array of
@@ -416,9 +416,47 @@ map it onto your carousel library.
 
 ## 10. Categories
 
-Categories are a per‑section taxonomy tree. They surface in two ways:
+Categories are a per‑section taxonomy tree, and they **carry their own content**: besides the
+name and the URL they have a description, an image and any extra fields defined in the panel.
 
-1. **On an entry** — via a `category` field: `post.category = [{ id, name, slug, parent_id }]`.
+### Listing categories — `cms.categories()`
+
+```jsx
+const categories = await cms.categories({ type: 'services' });
+
+<ul>
+  {categories.map((c) => (
+    <li key={c.id}>
+      <a href={c.path}>
+        {c.image && <img src={c.image} alt="" />}
+        <h3>{c.name}</h3>
+        <p>{c.description}</p>
+        {c.kisa_slogan && <small>{c.kisa_slogan}</small>}   {/* extra field from the panel */}
+      </a>
+    </li>
+  ))}
+</ul>
+```
+
+Each category is `{ id, parent_id, name, slug, description, image, type, path }` plus the
+**extra fields** defined on its section (`field_slug → value`).
+
+- **Standard fields**: title, slug, **description** and **image** (picked from the panel's
+  media library).
+- **Extra fields**: Panel → sitemap section → *Edit fields* → **Category fields**.
+  Available types: single line, multi line, rich text (entered per language) · image,
+  gallery (shared across languages). The defined list is in `cms.contentTypes()` under
+  `fields` where `group: 'category'`.
+- `path` is the category's public URL — the same address `cms.urls()` / `cms.routes()` report.
+- Categories of sections where categories are **disabled** are never returned.
+- Other helpers: `cms.categoryTree()` (children nested under `children`, roots only) ·
+  `cms.categoryMap()` (`slug → category`) · `cms.category(slug)`.
+  In client components: `useCategories({ type })` → `{ categories, bySlug, tree }`.
+
+### On entries and as URLs
+
+1. **On an entry** — via a `category` field:
+   `post.category = [{ id, name, slug, parent_id, description, image }]`.
 2. **As routable URLs** — `cms.urls()` returns category rows with `kind: 'category'`, so you can
    build category landing pages and list them per section:
 
@@ -901,7 +939,7 @@ A quick lookup when you're staring at a panel screen and wondering what to call.
 | Section builder / fields | field defs on entries | (fields on `list`/`item`/`page`) | — |
 | Entries | collection rows | `cms.list(type)` · `cms.item(type, slug)` | `useList` · `useItem` |
 | Single page | page body | `cms.page(type)` | `usePage` |
-| Categories | taxonomy | `cms.urls()` (`kind:'category'`) | `useUrls` |
+| Categories | taxonomy + category content | `cms.categories()` · `cms.categoryTree()` · `cms.urls()` (`kind:'category'`) | `useCategories` · `useUrls` |
 | Sliders | slides | `cms.slider(slug)` · `cms.sliders()` | `useSlider` |
 | Menus | nav trees | `cms.menu(slug)` · `cms.menuMap()` | `useMenu` · `useMenuTree` |
 | Language variables | UI strings | `cms.strings()` · `cms.string(key)` | `useStrings` |

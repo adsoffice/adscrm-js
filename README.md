@@ -161,6 +161,9 @@ Hepsi `Promise` döner ve son parametre olarak `{ locale, revalidate, tags, cach
 
 | Metot | Açıklama |
 |-------|----------|
+| `cms.categories({ type })` | **Kategoriler** (dile çözülmüş): ad, adres, açıklama, görsel, ek alanlar, `path` |
+| `cms.categoryTree({ type })` | Aynısı ağaç olarak (`children`); yalnızca kökler döner |
+| `cms.categoryMap()` · `cms.category(slug)` | `slug → kategori` haritası / tek kategori |
 | `cms.menus()` | Menü künyeleri (id, name, slug) |
 | `cms.menuTree()` | **Tüm menüler + ağaçları** tek istekte (`{ locales: 'all' }` → her dil) |
 | `cms.menuMap()` | Aynısı, `slug → menü` haritası olarak |
@@ -289,6 +292,39 @@ function renderItem(item) {
 - Bir dilde hiç öğe yoksa varsayılan dilin menüsüne düşülür — navigasyon boş kalmaz.
 
 İstemci bileşenlerinde: `const { bySlug } = useMenuTree()` · `useMenu('header')`.
+
+### Kategoriler
+
+Kategoriler panelde bir sitemap bölümüne bağlanır. Ad ve adresin yanında **açıklama**
+ve **görsel** standart olarak gelir; bölüme özel ek alanlar (tek satır, çok satır,
+zengin metin, görsel, galeri) panelden tanımlanır ve aynı nesnede `alan_slug → değer`
+olarak döner.
+
+```jsx
+const cats = await cms.categories({ type: 'hizmetler' });
+
+<ul>
+  {cats.map((c) => (
+    <li key={c.id}>
+      <a href={c.path}>
+        {c.image && <img src={c.image} alt="" />}
+        <h3>{c.name}</h3>
+        <p>{c.description}</p>
+        {c.kisa_slogan && <small>{c.kisa_slogan}</small>}   {/* panelden eklenen ek alan */}
+      </a>
+    </li>
+  ))}
+</ul>
+```
+
+- `path` kategorinin public yoludur (`/hizmetler/kategoriler/tadilat`) — `cms.urls()`
+  ve `cms.routes()` ile aynı adres.
+- Alt kategoriler için `cms.categoryTree()`: her kayda `children` eklenir, yalnızca
+  kökler döner.
+- Metin alanları istenen dile çözülür; görsel/galeri alanları tüm dillerde ortaktır.
+- Kategorileri **kapalı** bölümlerin kategorileri hiç dönmez.
+- Hangi ek alanların tanımlı olduğunu `cms.contentTypes()` yanıtındaki
+  `fields` dizisinde `group: 'category'` satırlarından okuyabilirsiniz.
 
 ### Dil
 
@@ -630,7 +666,7 @@ function Arama() {
 ```
 
 Mevcut hook'lar: `useSite` · `useLocales` · `useSocial` · `useCookie` · `useMaintenance` · `useSiteImages` · `useContentTypes` · `useUrls` ·
-`useRoutes` · `useList` · `useItem` · `usePage` · `useMenu` · `useMenuTree` · `useSlider` · `useView` · `useBlocks` ·
+`useRoutes` · `useList` · `useItem` · `usePage` · `useCategories` · `useMenu` · `useMenuTree` · `useSlider` · `useView` · `useBlocks` ·
 `useStrings` · `useSearch` · `useAdsForm` — ve her şey için genel `useAdsCrmQuery(key, fetcher)`.
 
 Hepsi `{ data, error, isLoading, isFetching, refetch }` döner; aynı anahtar için istekler
@@ -773,7 +809,7 @@ try {
 | `multiselect` / `json` | `string[]` / `object`\|`array` |
 | `image`, `file` | URL `string` |
 | `gallery` | `{ id, name, slug, images: [{ id, url, alt }] }` |
-| `category` | `[{ id, name, slug, parent_id }]` |
+| `category` | `[{ id, name, slug, parent_id, description, image }]` — kategorinin tüm alanları için `cms.categories()` |
 | `relation` | `{ id, slug, type, title }` — ilişkili sayfa; `cms.item(type, slug)` ile çekilir (yoksa `null`) |
 
 Her kayıt ayrıca `seo: { title, description, slug }` taşır — `toMetadata()` bunu doğrudan

@@ -329,7 +329,7 @@ Yöneticinin **Bölüm tasarımcısı**'nda eklediği her alan, kayıt üzerinde
 | `multiselect` / `json` | `string[]` / `object`\|`array` |
 | `image`, `file` | URL `string` |
 | `gallery` | `{ id, name, slug, images: [{ id, url, alt }] }` |
-| `category` | `[{ id, name, slug, parent_id }]` |
+| `category` | `[{ id, name, slug, parent_id, description, image }]` — kategorinin tüm alanları için `cms.categories()` |
 | `relation` | `{ id, slug, type, title }` — ilişkili kaydı `cms.item(type, slug)` ile çekin |
 
 Her kayıt ayrıca `seo: { title, description, slug }` ve kayda özgü serbest alanların dizisi
@@ -417,9 +417,47 @@ yapılandırdığı ne varsa; onu carousel kütüphanenize eşleyin.
 
 ## 10. Kategoriler
 
-Kategoriler bölüm başına taksonomi ağacıdır. İki şekilde görünür:
+Kategoriler bölüm başına taksonomi ağacıdır ve **kendi içeriğini taşır**: ad ve adresin
+yanında açıklama, görsel ve panelden tanımlanan ek alanlar.
 
-1. **Bir kayıt üzerinde** — bir `category` alanıyla: `post.kategori = [{ id, name, slug, parent_id }]`.
+### Kategori listesi — `cms.categories()`
+
+```jsx
+const kategoriler = await cms.categories({ type: 'hizmetler' });
+
+<ul>
+  {kategoriler.map((k) => (
+    <li key={k.id}>
+      <a href={k.path}>
+        {k.image && <img src={k.image} alt="" />}
+        <h3>{k.name}</h3>
+        <p>{k.description}</p>
+        {k.kisa_slogan && <small>{k.kisa_slogan}</small>}   {/* panelden eklenen ek alan */}
+      </a>
+    </li>
+  ))}
+</ul>
+```
+
+Her kategori: `{ id, parent_id, name, slug, description, image, type, path }` + bölümde
+tanımlı **ek alanlar** (`alan_slug → değer`).
+
+- **Standart alanlar**: başlık, adres (slug), **açıklama** ve **görsel** (görsel, panelin
+  medya kütüphanesinden seçilir).
+- **Ek alanlar**: Panel → Sitemap bölümü → *Alanları Düzenle* → **Kategori Alanları**.
+  Kullanılabilen tipler: tek satır, çok satır, zengin metin (dile göre ayrı girilir) ·
+  görsel, galeri (tüm dillerde ortak). Tanımlı alanların listesi `cms.contentTypes()`
+  yanıtındaki `fields` dizisinde `group: 'category'` satırlarıdır.
+- `path` kategorinin public yoludur; `cms.urls()` / `cms.routes()` ile aynı adres.
+- Kategorileri **kapalı** bölümlerin kategorileri hiç dönmez.
+- Diğer yardımcılar: `cms.categoryTree()` (alt kategoriler `children` altında, yalnızca
+  kökler döner) · `cms.categoryMap()` (`slug → kategori`) · `cms.category(slug)`.
+  İstemci bileşenlerinde: `useCategories({ type })` → `{ categories, bySlug, tree }`.
+
+### Kayıtlar ve URL'ler
+
+1. **Bir kayıt üzerinde** — bir `category` alanıyla:
+   `post.kategori = [{ id, name, slug, parent_id, description, image }]`.
 2. **Rotalanabilir URL olarak** — `cms.urls()` `kind: 'category'` satırları döndürür; böylece
    kategori açılış sayfaları kurabilir ve bölüm başına listeleyebilirsiniz:
 
@@ -898,7 +936,7 @@ Bir panel ekranına bakıp "ne çağırmalıyım" dediğinizde hızlı başvuru.
 | Bölüm tasarımcısı / alanlar | kayıtlardaki alan tanımları | (`list`/`item`/`page` üzerindeki alanlar) | — |
 | Kayıtlar | koleksiyon satırları | `cms.list(tip)` · `cms.item(tip, slug)` | `useList` · `useItem` |
 | Tekil sayfa | sayfa gövdesi | `cms.page(tip)` | `usePage` |
-| Kategoriler | taksonomi | `cms.urls()` (`kind:'category'`) | `useUrls` |
+| Kategoriler | taksonomi + kategori içeriği | `cms.categories()` · `cms.categoryTree()` · `cms.urls()` (`kind:'category'`) | `useCategories` · `useUrls` |
 | Sliderlar | slaytlar | `cms.slider(slug)` · `cms.sliders()` | `useSlider` |
 | Menüler | nav ağaçları | `cms.menu(slug)` · `cms.menuMap()` | `useMenu` · `useMenuTree` |
 | Dil değişkenleri | arayüz metinleri | `cms.strings()` · `cms.string(key)` | `useStrings` |
