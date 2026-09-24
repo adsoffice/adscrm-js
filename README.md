@@ -810,7 +810,27 @@ try {
 | `image`, `file` | URL `string` |
 | `gallery` | `{ id, name, slug, images: [{ id, url, alt }] }` |
 | `category` | `[{ id, name, slug, parent_id, description, image }]` — kategorinin tüm alanları için `cms.categories()` |
-| `relation` | `{ id, slug, type, title }` — ilişkili sayfa; `cms.item(type, slug)` ile çekilir (yoksa `null`) |
+| `relation` | Sayfa hedefli: `{ id, kind: 'item', slug, type, title }` — `cms.item(type, slug)` ile çekilir · Kategori hedefli: `{ id, kind: 'category', slug, title, type, path, description, image }` — `path` doğrudan bağlantıdır (yoksa `null`) |
+
+**İlişki alanı — sayfa mı, kategori mi?** Panelde ilişki alanının hedefi bir sitemap
+bölümü (sayfa) ya da kategoriler (tüm kategoriler veya bir bölümün kategorileri)
+olabilir. Hangisi olduğunu `kind` söyler:
+
+```jsx
+const rel = post.ilgili; // relation alanı
+
+if (rel?.kind === 'category') {
+  // Kategori: künye istenen dile çözülmüş gelir, path doğrudan bağlantıdır.
+  return <a href={rel.path}>{rel.title}</a>;
+}
+if (rel) {
+  // Sayfa: ilişkili kaydın tamamı gerekirse ayrıca çekilir.
+  const target = await cms.item(rel.type, rel.slug);
+}
+```
+
+Çok dilli sitelerde ilişki alanını panelde **Ortak alan** yapın: seçim tüm dillerde
+geçerli olur, künye her dilde o dilin adı ve adresiyle döner.
 
 Her kayıt ayrıca `seo: { title, description, slug }` taşır — `toMetadata()` bunu doğrudan
 Next metadata nesnesine çevirir.

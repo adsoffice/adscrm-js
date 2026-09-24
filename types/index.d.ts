@@ -148,7 +148,11 @@ export type FieldType =
 
 export interface FieldDefinition {
     id: number;
-    group: 'item' | 'page';
+    /**
+     * item = alt sayfa alanı · page = bölümün kendi sayfasının alanı ·
+     * category = bu bölümün kategorilerinde görünen ek alan (`cms.categories()` yanıtına eklenir).
+     */
+    group: 'item' | 'page' | 'category';
     name: string;
     slug: string;
     type: FieldType;
@@ -165,6 +169,10 @@ export interface ContentType {
     icon: string | null;
     translations: Record<Locale, { name: string; slug: string }> | null;
     fields: FieldDefinition[];
+    /** Bu bölümde kategoriler açık mı. */
+    categories_enabled?: boolean;
+    /** Dile göre kategori URL öneki: `{ tr: 'kategoriler', en: 'categories' }` (kapalıysa null). */
+    category_prefixes?: Record<Locale, string> | null;
 }
 
 export type LinkKind = 'section' | 'page' | 'category';
@@ -315,17 +323,45 @@ export interface CategoryValue {
 }
 
 /**
- * `relation` alanının değeri — ilişkili sayfanın künyesi. `type` + `slug` ile
- * ilişkili içerik `cms.item(type, slug)` ile çekilebilir. İlişki yoksa `null`.
+ * Sayfa hedefli `relation` değeri — ilişkili sayfanın künyesi. `type` + `slug`
+ * ile ilişkili içerik `cms.item(type, slug)` ile çekilebilir.
  */
-export interface RelationValue {
+export interface ItemRelationValue {
     id: number;
+    /** Hedef türü. Eski panel sürümleri göndermez; yoksa sayfa ilişkisidir. */
+    kind?: 'item';
     slug: string;
     /** İlişkili sayfanın bağlı olduğu bölümün slug'ı. */
     type: string | null;
     /** İlişkili sayfanın başlığı (ilk metin alanı). */
     title: string | null;
 }
+
+/**
+ * Kategori hedefli `relation` değeri — istenen dile çözülmüş kategori künyesi.
+ * `path` doğrudan bağlantı olarak kullanılabilir; ek kategori alanları için
+ * `cms.category(slug, { type })`.
+ */
+export interface CategoryRelationValue {
+    id: number;
+    kind: 'category';
+    slug: string;
+    /** Kategori adı. */
+    title: string;
+    /** Kategorinin bağlı olduğu bölümün slug'ı (bölüme bağlı değilse null). */
+    type: string | null;
+    /** Public kategori yolu: `/cozumler/kategoriler/yapay-zeka` (bölüme bağlı değilse null). */
+    path: string | null;
+    description: string | null;
+    image: string | null;
+}
+
+/**
+ * `relation` alanının değeri. Alan panelde bir sitemap bölümüne (sayfa) ya da
+ * kategorilere bağlanır; hangisi olduğu `kind` ile ayırt edilir. İlişki yoksa,
+ * hedef silinmişse ya da kategorinin bölümünde kategoriler kapalıysa `null`.
+ */
+export type RelationValue = ItemRelationValue | CategoryRelationValue;
 
 export type FieldValue =
     | string | number | boolean | null

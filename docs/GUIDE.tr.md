@@ -330,7 +330,27 @@ Yöneticinin **Bölüm tasarımcısı**'nda eklediği her alan, kayıt üzerinde
 | `image`, `file` | URL `string` |
 | `gallery` | `{ id, name, slug, images: [{ id, url, alt }] }` |
 | `category` | `[{ id, name, slug, parent_id, description, image }]` — kategorinin tüm alanları için `cms.categories()` |
-| `relation` | `{ id, slug, type, title }` — ilişkili kaydı `cms.item(type, slug)` ile çekin |
+| `relation` | Sayfa: `{ id, kind: 'item', slug, type, title }` — `cms.item(type, slug)` ile çekin · Kategori: `{ id, kind: 'category', slug, title, type, path, description, image }` |
+
+**İlişki alanı — sayfa mı, kategori mi?** Panelde ilişki alanının hedefi bir sitemap
+bölümü (sayfa) ya da kategoriler (tüm kategoriler veya bir bölümün kategorileri)
+olabilir. Hangisi olduğunu `kind` söyler:
+
+```jsx
+const rel = post.ilgili; // relation alanı
+
+if (rel?.kind === 'category') {
+  // Kategori: künye istenen dile çözülmüş gelir, path doğrudan bağlantıdır.
+  return <a href={rel.path}>{rel.title}</a>;
+}
+if (rel) {
+  // Sayfa: ilişkili kaydın tamamı gerekirse ayrıca çekilir.
+  const target = await cms.item(rel.type, rel.slug);
+}
+```
+
+Çok dilli sitelerde ilişki alanını panelde **Ortak alan** yapın: seçim tüm dillerde
+geçerli olur, künye her dilde o dilin adı ve adresiyle döner.
 
 Her kayıt ayrıca `seo: { title, description, slug }` ve kayda özgü serbest alanların dizisi
 `custom_fields` taşır:
@@ -444,7 +464,9 @@ tanımlı **ek alanlar** (`alan_slug → değer`).
 
 - **Standart alanlar**: başlık, adres (slug), **açıklama** ve **görsel** (görsel, panelin
   medya kütüphanesinden seçilir).
-- **Ek alanlar**: Panel → Sitemap bölümü → *Alanları Düzenle* → **Kategori Alanları**.
+- **Ek alanlar**: Panel → Sitemap bölümü → *Alanları Düzenle* → **Kategori Alanları**
+  (aynı alanlar Panel → *Kategoriler* ekranındaki bölüm kartından ve bölümün içerik
+  listesindeki **Kategoriler** düğmesinden de yönetilir).
   Kullanılabilen tipler: tek satır, çok satır, zengin metin (dile göre ayrı girilir) ·
   görsel, galeri (tüm dillerde ortak). Tanımlı alanların listesi `cms.contentTypes()`
   yanıtındaki `fields` dizisinde `group: 'category'` satırlarıdır.

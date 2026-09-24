@@ -329,7 +329,27 @@ Every field the admin adds in the **Section builder** appears as a property on t
 | `image`, `file` | URL `string` |
 | `gallery` | `{ id, name, slug, images: [{ id, url, alt }] }` |
 | `category` | `[{ id, name, slug, parent_id, description, image }]` — use `cms.categories()` for every category field |
-| `relation` | `{ id, slug, type, title }` — fetch the linked entry with `cms.item(type, slug)` |
+| `relation` | Entry: `{ id, kind: 'item', slug, type, title }` — fetch it with `cms.item(type, slug)` · Category: `{ id, kind: 'category', slug, title, type, path, description, image }` |
+
+**Relation field — entry or category?** In the panel a relation field targets either a
+sitemap section (entries) or categories (all categories or one section's categories).
+`kind` tells them apart:
+
+```jsx
+const rel = post.related; // relation field
+
+if (rel?.kind === 'category') {
+  // Category: resolved to the requested locale; path is a ready-to-use link.
+  return <a href={rel.path}>{rel.title}</a>;
+}
+if (rel) {
+  // Entry: fetch the full linked record when needed.
+  const target = await cms.item(rel.type, rel.slug);
+}
+```
+
+On multilingual sites mark the relation field as **Shared** in the panel: one choice
+applies to every locale, and the reference is returned with that locale's name and path.
 
 Every entry also carries `seo: { title, description, slug }` and a `custom_fields` array of
 per‑entry free fields:
@@ -443,7 +463,9 @@ Each category is `{ id, parent_id, name, slug, description, image, type, path }`
 
 - **Standard fields**: title, slug, **description** and **image** (picked from the panel's
   media library).
-- **Extra fields**: Panel → sitemap section → *Edit fields* → **Category fields**.
+- **Extra fields**: Panel → sitemap section → *Edit fields* → **Category fields**
+  (the same fields can also be managed from the section card on Panel → *Categories*
+  and from the **Categories** button on the section's entry list).
   Available types: single line, multi line, rich text (entered per language) · image,
   gallery (shared across languages). The defined list is in `cms.contentTypes()` under
   `fields` where `group: 'category'`.
